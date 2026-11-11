@@ -1,0 +1,69 @@
+<% var titulo = 'Documentos' %>
+<%- include('partials/head') %>
+<% var ativo = 'documentos' %>
+<%- include('partials/sidebar') %>
+
+<div class="content-header">
+    <h1>Documentos</h1>
+    <% if (aba === 'modelos' && pode('gerenciarProcessos')) { %><a class="btn" href="/documentos/modelos/novo">Novo modelo</a><% } %>
+</div>
+
+<% if (msg) { %><div class="msg-flash"><%= msg %></div><% } %>
+
+<nav class="abas" aria-label="Seções">
+    <a href="/documentos" class="aba <%= aba === 'arquivos' ? 'ativa' : '' %>" <%= aba === 'arquivos' ? 'aria-current=page' : '' %>>Arquivos anexados</a>
+    <a href="/documentos?aba=modelos" class="aba <%= aba === 'modelos' ? 'ativa' : '' %>" <%= aba === 'modelos' ? 'aria-current=page' : '' %>>Modelos</a>
+</nav>
+
+<% if (aba === 'arquivos') { %>
+<% var kb = function(n) { return n >= 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }; %>
+<div class="card">
+    <form class="filtros" method="get" action="/documentos">
+        <input type="search" name="busca" value="<%= busca || '' %>" placeholder="nome do arquivo, descrição, caso ou número do processo" class="campo-busca" aria-label="Buscar">
+        <button type="submit" class="secondary">Buscar</button>
+    </form>
+    <p class="meta">Os arquivos são anexados na tela de cada processo ou caso.</p>
+    <div class="tabela-rolavel">
+    <table>
+        <thead><tr><th>Arquivo</th><th>Processo / caso</th><th>Enviado</th></tr></thead>
+        <tbody>
+            <% documentos.forEach(function(d) { %>
+            <tr>
+                <td>
+                    <a href="/documentos/<%= d.id %>/baixar"><%= d.nome_original %></a> <span class="meta">· <%= kb(d.tamanho) %></span>
+                    <% if (d.descricao) { %><div class="meta"><%= d.descricao %></div><% } %>
+                </td>
+                <td><% if (d.processo_id) { %><a class="mono" href="/processos/<%= d.processo_id %>"><%= fmtCnj(d.numero_processo) %></a><% } else { %><a href="/casos/<%= d.caso_id %>"><%= d.caso_titulo %></a><% } %></td>
+                <td class="meta"><%= d.enviado_por_nome || '—' %>, <%= fmtDataHora(d.criado_em) %></td>
+            </tr>
+            <% }) %>
+            <% if (!documentos.length) { %><tr><td colspan="3" class="meta">Nenhum documento encontrado.</td></tr><% } %>
+        </tbody>
+    </table>
+    </div>
+    <%- include('partials/paginacao') %>
+</div>
+<% } else { %>
+<div class="card">
+    <p class="meta">Modelos são textos-base (ofícios, petições simples, manifestações) com campos como
+    <span class="mono">{{numero_processo}}</span> e <span class="mono">{{orgao_julgador}}</span>, preenchidos com os dados do processo
+    ou caso na hora de gerar. O resultado pode ser copiado ou baixado para o Word.</p>
+    <div class="tabela-rolavel">
+    <table>
+        <thead><tr><th>Modelo</th><th>Atualizado</th><th></th></tr></thead>
+        <tbody>
+            <% modelos.forEach(function(m) { %>
+            <tr class="<%= m.ativo ? '' : 'inativo' %>">
+                <td><strong><%= m.nome %></strong><%= m.ativo ? '' : ' (desativado)' %><% if (m.descricao) { %><div class="meta"><%= m.descricao %></div><% } %></td>
+                <td class="meta"><%= m.atualizado_por_nome ? m.atualizado_por_nome + ', ' : '' %><%= fmtDataHora(m.atualizado_em) %></td>
+                <td><% if (pode('gerenciarProcessos')) { %><a class="btn secondary" href="/documentos/modelos/<%= m.id %>">Editar</a><% } %></td>
+            </tr>
+            <% }) %>
+            <% if (!modelos.length) { %><tr><td colspan="3" class="meta">Nenhum modelo cadastrado.</td></tr><% } %>
+        </tbody>
+    </table>
+    </div>
+</div>
+<% } %>
+
+<%- include('partials/foot') %>

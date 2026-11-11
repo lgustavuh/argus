@@ -1,0 +1,90 @@
+<% var titulo = 'Cadastrar processos' %>
+<%- include('partials/head') %>
+<% var ativo = 'processos' %>
+<%- include('partials/sidebar') %>
+
+<a href="/processos" class="btn ghost">&larr; voltar</a>
+
+<div class="content-header">
+    <h1>Cadastrar processos</h1>
+</div>
+
+<% if (resultado) { %>
+<div class="card">
+    <h2>Resultado do cadastro</h2>
+    <ul class="resultado-lista">
+        <li><strong><%= resultado.cadastrados.length %></strong> processo(s) cadastrado(s)</li>
+        <li><strong><%= resultado.existentes.length %></strong> já estavam cadastrados (ignorados)</li>
+        <li><strong><%= resultado.invalidos.length %></strong> número(s) inválido(s) — dígito verificador não confere</li>
+        <% if (resultado.semTribunal.length) { %><li><strong><%= resultado.semTribunal.length %></strong> de tribunal não coberto pela fonte de dados</li><% } %>
+        <% if (resultado.excedentes) { %><li><strong><%= resultado.excedentes %></strong> ficaram de fora (limite de <%= maxPorImportacao %> por envio) — envie o restante em seguida</li><% } %>
+    </ul>
+    <% if (resultado.cadastrados.length) { %>
+    <p class="meta">
+        <% if (resultado.consultaIniciada) { %>Os dados de cada processo estão sendo buscados em segundo plano — em alguns instantes a lista de processos mostra classe, movimentações e situação.
+        <% } else { %>A fonte de dados está indisponível no momento; os processos serão consultados na próxima atualização.<% } %>
+    </p>
+    <% } %>
+    <% if (resultado.invalidos.length) { %>
+    <details>
+        <summary class="btn secondary">Ver números inválidos</summary>
+        <pre class="mono lista-numeros"><%= resultado.invalidos.join('\n') %></pre>
+    </details>
+    <% } %>
+    <% if (resultado.semTribunal.length) { %>
+    <details>
+        <summary class="btn secondary">Ver números de tribunal não coberto</summary>
+        <pre class="mono lista-numeros"><%= resultado.semTribunal.join('\n') %></pre>
+    </details>
+    <% } %>
+    <p><a class="btn" href="/processos">Ir para a lista de processos</a></p>
+</div>
+<% } %>
+
+<div class="grid-2">
+    <div class="card">
+        <h2>Importar uma lista</h2>
+        <p class="meta">Cole os números como vierem — uma coluna copiada do Excel, um relatório do PJe/eproc, um CSV.
+        O Argus reconhece os números CNJ no texto (com ou sem pontuação), confere o dígito verificador e ignora
+        o que já estiver cadastrado.</p>
+        <form method="post" action="/processos/novo">
+            <input type="hidden" name="modo" value="lote">
+            <label for="lista">Números dos processos</label>
+            <textarea id="lista" name="lista" rows="12" class="mono" placeholder="5001098-52.2026.8.13.0529&#10;50010976720268130529&#10;..." data-contar-cnj="#contador" required></textarea>
+            <p class="meta" id="contador"></p>
+            <label for="arquivo">ou carregue um arquivo CSV/TXT</label>
+            <input type="file" id="arquivo" accept=".csv,.txt,text/csv,text/plain" data-carregar-em="#lista">
+            <label for="responsavelLote">Responsável (opcional, vale para todos)</label>
+            <select id="responsavelLote" name="responsavelId">
+                <option value="">Sem responsável</option>
+                <% responsaveis.forEach(function(p) { %><option value="<%= p.id %>"><%= p.nome %></option><% }) %>
+            </select>
+            <div class="form-acoes"><button type="submit">Importar</button></div>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Cadastrar um processo</h2>
+        <form method="post" action="/processos/novo">
+            <input type="hidden" name="modo" value="unico">
+            <label for="numero">Número CNJ</label>
+            <input type="text" id="numero" name="numero" class="mono campo-largo" placeholder="0000000-00.0000.0.00.0000" required>
+            <label for="observacao">Observação (opcional)</label>
+            <input type="text" id="observacao" name="observacao" class="campo-largo" placeholder="ex.: execução fiscal — IPTU 2023">
+            <label for="responsavelUnico">Responsável (opcional)</label>
+            <select id="responsavelUnico" name="responsavelId">
+                <option value="">Sem responsável</option>
+                <% responsaveis.forEach(function(p) { %><option value="<%= p.id %>"><%= p.nome %></option><% }) %>
+            </select>
+            <div class="form-acoes"><button type="submit">Cadastrar</button></div>
+        </form>
+        <hr>
+        <h3>Como o Argus acompanha os processos</h3>
+        <p class="meta">Fonte de dados atual: <strong><%= fonteRotulo %></strong>. Cada processo cadastrado é consultado
+        periodicamente; as movimentações novas que podem abrir prazo viram alertas para a equipe.</p>
+        <p class="meta">Na primeira consulta, o histórico completo entra na linha do tempo, mas só geram alerta as
+        movimentações relevantes mais recentes — para não inundar o painel com intimações antigas já tratadas.</p>
+    </div>
+</div>
+
+<%- include('partials/foot') %>

@@ -1,0 +1,43 @@
+<% var titulo = 'Minha conta' %>
+<%- include('partials/head') %>
+<% var ativo = 'conta' %>
+<%- include('partials/sidebar') %>
+
+<div class="content-header">
+    <h1>Minha conta</h1>
+</div>
+
+<% if (forcarTroca) { %>
+<div class="msg-flash aviso">Você está usando uma senha provisória. Defina uma senha pessoal para continuar usando o sistema.</div>
+<% } %>
+<% if (msg) { %><div class="msg-flash"><%= msg %></div><% } %>
+
+<div class="grid-2">
+    <div class="card">
+        <h2>Seus dados</h2>
+        <dl class="trilha">
+            <dt>Nome</dt><dd><%= usuario.nome %></dd>
+            <dt>E-mail</dt><dd><%= usuario.email %></dd>
+            <dt>Perfil</dt><dd><%= rotuloPapel %></dd>
+            <dt>Último acesso</dt><dd><%= fmtDataHora(usuario.ultimo_login_em) %></dd>
+        </dl>
+        <p class="meta">Para alterar nome, e-mail ou perfil, fale com o administrador do sistema (TI).</p>
+    </div>
+
+    <div class="card">
+        <h2>Trocar senha</h2>
+        <form method="post" action="/minha-conta/senha" class="form-vertical">
+            <label for="senhaAtual">Senha atual</label>
+            <input type="password" id="senhaAtual" name="senhaAtual" autocomplete="current-password" required>
+            <label for="novaSenha">Nova senha</label>
+            <input type="password" id="novaSenha" name="novaSenha" autocomplete="new-password" minlength="10" required>
+            <label for="confirmarSenha">Confirmar nova senha</label>
+            <input type="password" id="confirmarSenha" name="confirmarSenha" autocomplete="new-password" minlength="10" required>
+            <p class="meta">Mínimo de 10 caracteres, com letras e números.</p>
+            <% if (erro) { %><p class="erro"><%= erro %></p><% } %>
+            <div class="form-acoes"><button type="submit">Salvar nova senha</button></div>
+        </form>
+    </div>
+</div>
+
+<%- include('partials/foot') %>

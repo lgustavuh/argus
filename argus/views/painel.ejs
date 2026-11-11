@@ -1,0 +1,176 @@
+<% var titulo = 'Painel de controle' %>
+<%- include('partials/head') %>
+<% var ativo = 'painel' %>
+<%- include('partials/sidebar') %>
+
+<div class="content-header">
+    <h1>Painel de controle</h1>
+</div>
+
+<% if (msg) { %><div class="msg-flash"><%= msg %></div><% } %>
+
+<div class="shortcuts">
+    <a class="shortcut-tile" href="/alertas?status=abertos">
+        <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+        </span>
+        <span class="label">Alertas</span>
+    </a>
+    <a class="shortcut-tile" href="/agenda">
+        <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+        </span>
+        <span class="label">Agenda</span>
+    </a>
+    <a class="shortcut-tile" href="/processos">
+        <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
+        </span>
+        <span class="label">Processos</span>
+    </a>
+    <% if (pode('gerenciarProcessos')) { %>
+    <a class="shortcut-tile" href="/processos/novo">
+        <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        </span>
+        <span class="label">Cadastrar processos</span>
+    </a>
+    <% } %>
+    <% if (pode('rodarSync') && resumoProcessos.total > 0) { %>
+    <form method="post" action="/sync/run">
+        <button type="submit" class="shortcut-tile shortcut-button" <%= sync.emAndamento ? 'disabled' : '' %>>
+            <span class="icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+            </span>
+            <span class="label"><%= sync.emAndamento ? 'Sincronizando…' : 'Atualizar agora' %></span>
+        </button>
+    </form>
+    <% } %>
+</div>
+
+<% var totalDia = dia.grupos.reduce(function(s, g) { return s + g.itens.length; }, 0); %>
+<div class="card meu-dia">
+    <div class="card-title-row">
+        <h2><%= dia.escopo === 'meus' ? 'Meu dia' : 'Agenda da Procuradoria' %> <span class="meta">— <%= diaDaSemana(dia.hoje) %>, <%= fmtData(dia.hoje) %></span></h2>
+        <div class="filtros acoes-topo">
+            <% if (dia.podeTerProprios) { %>
+            <a class="btn ghost" href="/painel<%= dia.escopo === 'meus' ? '?agenda=todos' : '' %>"><%= dia.escopo === 'meus' ? 'ver de todos' : 'ver só os meus' %></a>
+            <% } %>
+            <a class="btn secondary" href="/agenda<%= dia.escopo === 'meus' ? '?responsavel=meus' : '' %>">Abrir agenda</a>
+        </div>
+    </div>
+    <% if (!totalDia) { %>
+    <p class="meta">Nenhum prazo, audiência ou tarefa em aberto<%= dia.escopo === 'meus' ? ' com você como responsável' : '' %>.
+    <% if (pode('gerenciarAgenda')) { %>Lance um prazo a partir de um alerta ("Registrar prazo") ou em <a href="/agenda/novo">Agenda › Novo prazo</a>.<% } %></p>
+    <% } else { %>
+    <div class="meu-dia-grupos">
+        <% dia.grupos.forEach(function(g) { if (!g.itens.length) return; %>
+        <section class="agenda-grupo <%= g.chave %>">
+            <h3><%= g.titulo %> <span class="meta">(<%= g.itens.length %>)</span></h3>
+            <ul class="agenda-lista">
+                <% g.itens.forEach(function(c) { %><%- include('partials/compromisso_linha', { c: c }) %><% }) %>
+            </ul>
+        </section>
+        <% }) %>
+    </div>
+    <% } %>
+</div>
+
+<% if (resumoProcessos.total === 0) { %>
+<div class="card vazio">
+    <h2>Nenhum processo monitorado ainda</h2>
+    <p class="meta">O Argus acompanha os processos cujos números forem cadastrados. Cole uma lista exportada de
+    qualquer planilha ou relatório — o sistema reconhece os números automaticamente.</p>
+    <% if (pode('gerenciarProcessos')) { %><a class="btn" href="/processos/novo">Cadastrar processos</a><% } %>
+</div>
+<% } %>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <div class="card-title-row"><h2>Alertas</h2></div>
+        <div class="counter-list">
+            <a class="counter-row" href="/alertas?status=pendente">
+                <span class="num status-pendente"><%= resumoAlertas.pendente %></span>
+                <span class="desc">Pendentes — ninguém viu ainda</span>
+            </a>
+            <a class="counter-row" href="/alertas?status=visualizado">
+                <span class="num status-visualizado"><%= resumoAlertas.visualizado %></span>
+                <span class="desc">Visualizados, sem ciência confirmada</span>
+            </a>
+            <a class="counter-row" href="/alertas?status=escalado">
+                <span class="num status-escalado"><%= resumoAlertas.escalado %></span>
+                <span class="desc">Escalados — estouraram o prazo interno</span>
+            </a>
+            <a class="counter-row" href="/alertas?status=ciente">
+                <span class="num status-ciente"><%= resumoAlertas.ciente %></span>
+                <span class="desc">Com ciência confirmada</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title-row"><h2>Processos</h2></div>
+        <div class="counter-list">
+            <a class="counter-row" href="/processos">
+                <span class="num"><%= resumoProcessos.total %></span>
+                <span class="desc">Monitorados pelo Argus</span>
+            </a>
+            <a class="counter-row" href="/processos?situacao=aguardando">
+                <span class="num"><%= resumoProcessos.aguardando %></span>
+                <span class="desc">Aguardando primeira consulta</span>
+            </a>
+            <a class="counter-row" href="/processos?situacao=nao_localizado">
+                <span class="num"><%= resumoProcessos.naoLocalizados %></span>
+                <span class="desc">Não localizados na fonte de dados</span>
+            </a>
+            <a class="counter-row" href="/processos?semResponsavel=true">
+                <span class="num"><%= resumoProcessos.semResponsavel %></span>
+                <span class="desc">Sem responsável definido</span>
+            </a>
+            <div class="counter-row estatico">
+                <span class="num"><%= resumoProcessos.semMovimentacao %></span>
+                <span class="desc">Sem movimentação há mais de <%= resumoProcessos.diasSemMovimentacao %> dias</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title-row"><h2>Atividade recente</h2></div>
+        <div class="activity-feed">
+            <% recentes.forEach(function(a) { %>
+            <a class="activity-item" href="/alertas/<%= a.id %>">
+                <span class="meta"><%= fmtDataHora(a.criado_em) %> · <span class="badge <%= a.status %>"><%= a.status %></span></span>
+                <span class="titulo mono"><%= fmtCnj(a.numero_processo) %></span>
+                <span class="titulo"> — <%= a.movimento_nome || 'Movimento sem descrição' %></span>
+            </a>
+            <% }) %>
+            <% if (!recentes.length) { %>
+            <p class="meta">Nenhum alerta registrado ainda.</p>
+            <% } %>
+        </div>
+        <p class="meta sync-status">
+            <% if (sync.emAndamento) { %>Sincronização em andamento…<% } else if (sync.ultimoEm) { %>Última atualização automática: <%= fmtDataHora(sync.ultimoEm) %><% } else { %>Nenhuma atualização automática executada ainda.<% } %>
+            <% if (!sync.ativo) { %><br>Atualização automática desativada.<% } %>
+        </p>
+    </div>
+</div>
+
+<%- include('partials/foot') %>

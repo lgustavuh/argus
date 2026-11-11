@@ -1,0 +1,63 @@
+<% var titulo = 'Alertas' %>
+<%- include('partials/head') %>
+<% var ativo = 'alertas' %>
+<%- include('partials/sidebar') %>
+
+<div class="content-header">
+    <h1>Alertas</h1>
+</div>
+
+<% if (msg) { %><div class="msg-flash"><%= msg %></div><% } %>
+
+<div class="card">
+    <div class="filtros abas-filtro">
+        <% [['abertos','Em aberto'],['','Todos'],['pendente','Pendentes'],['visualizado','Visualizados'],['escalado','Escalados'],['ciente','Com ciência']].forEach(function(f) { %>
+        <a class="btn secondary <%= (statusAtual || '') === f[0] ? 'selecionado' : '' %>" href="/alertas<%= f[0] ? '?status=' + f[0] : '' %>"><%= f[1] %></a>
+        <% }) %>
+    </div>
+    <div class="tabela-rolavel">
+    <table>
+        <thead>
+            <tr>
+                <th></th>
+                <th>Número do processo</th>
+                <th>Movimentação</th>
+                <th>Status</th>
+                <th>Criado em</th>
+                <th>Sistema</th>
+                <th>Responsável</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <% alertas.forEach(function(a) { %>
+            <tr>
+                <td>
+                    <span class="urgencia <%= a.peso_urgencia >= 4 ? 'urgencia-alta' : (a.peso_urgencia >= 2 ? 'urgencia-media' : 'urgencia-baixa') %>" title="Peso de urgência <%= a.peso_urgencia %>"></span>
+                </td>
+                <td class="mono"><%= fmtCnj(a.numero_processo) %></td>
+                <td><%= a.movimento_nome || '—' %></td>
+                <td><span class="badge <%= a.status %>"><%= a.status %></span></td>
+                <td class="meta"><%= fmtDataHora(a.criado_em) %></td>
+                <td>
+                    <% var sa = sistemaDoProcesso(a); %>
+                    <% if (a.link_consulta_publica) { %>
+                    <a href="<%= a.link_consulta_publica %>" target="_blank" rel="noopener"><%= sa ? sa.rotulo : 'consultar' %></a>
+                    <% } else { %>
+                    <span class="meta" title="O DataJud não informa o sistema deste processo">não informado</span>
+                    <% } %>
+                </td>
+                <td><%= a.procurador_nome || '—' %></td>
+                <td><a class="btn secondary" href="/alertas/<%= a.id %>">Ver</a></td>
+            </tr>
+            <% }) %>
+            <% if (!alertas.length) { %>
+            <tr><td colspan="8" class="meta">Nenhum alerta encontrado.</td></tr>
+            <% } %>
+        </tbody>
+    </table>
+    </div>
+    <%- include('partials/paginacao') %>
+</div>
+
+<%- include('partials/foot') %>

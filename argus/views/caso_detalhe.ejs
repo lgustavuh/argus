@@ -1,0 +1,85 @@
+<% var titulo = caso.titulo %>
+<%- include('partials/head') %>
+<% var ativo = 'casos' %>
+<%- include('partials/sidebar') %>
+
+<% var k = caso; var aberto = k.status === 'aberto'; %>
+
+<a href="/casos" class="btn ghost">&larr; casos</a>
+
+<div class="content-header">
+    <h1><%= k.titulo %></h1>
+    <span class="badge neutro"><%= aberto ? 'em andamento' : 'encerrado' %></span>
+    <%- include('partials/etiquetas', { lista: Array.isArray(k.etiquetas) ? k.etiquetas : [], base: '/casos' }) %>
+</div>
+
+<% if (msg) { %><div class="msg-flash"><%= msg %></div><% } %>
+<% if (erros.length) { %>
+<div class="msg-flash aviso"><% erros.forEach(function(e) { %><div><%= e %></div><% }) %></div>
+<% } %>
+
+<div class="grid-2">
+    <div class="card">
+        <h2><%= TIPOS[k.tipo] || k.tipo %></h2>
+        <dl class="trilha">
+            <dt>Referência</dt><dd><%= k.referencia || '—' %></dd>
+            <dt>Interessado</dt><dd><%= k.interessado || '—' %></dd>
+            <dt>Responsável</dt><dd><%= k.responsavel_nome || '—' %></dd>
+            <dt>Processo judicial</dt>
+            <dd><% if (k.processo_id) { %><a class="mono" href="/processos/<%= k.processo_id %>"><%= fmtCnj(k.numero_processo) %></a><% } else { %>—<% } %></dd>
+            <dt>Cadastro</dt><dd><%= k.criado_por_nome ? k.criado_por_nome + ', ' : '' %><%= fmtDataHora(k.criado_em) %></dd>
+            <% if (!aberto) { %><dt>Encerrado</dt><dd><%= fmtDataHora(k.encerrado_em) %></dd><% } %>
+        </dl>
+        <% if (k.descricao) { %><p class="texto-livre"><%= k.descricao %></p><% } %>
+        <% if (pode('gerenciarProcessos')) { %>
+        <form method="post" action="/casos/<%= k.id %>/status" class="filtros acoes"
+              data-confirmar="<%= aberto ? 'Encerrar este caso? Ele sai da lista de casos em andamento.' : 'Reabrir este caso?' %>">
+            <input type="hidden" name="status" value="<%= aberto ? 'encerrado' : 'aberto' %>">
+            <button type="submit" class="secondary"><%= aberto ? 'Encerrar caso' : 'Reabrir caso' %></button>
+        </form>
+        <% } %>
+    </div>
+
+    <div class="card">
+        <div class="card-title-row">
+            <h2>Prazos e compromissos</h2>
+            <% if (pode('gerenciarAgenda')) { %><a class="btn secondary" href="/agenda/novo?casoId=<%= k.id %>">Novo compromisso</a><% } %>
+        </div>
+        <% if (compromissos.length) { %>
+        <ul class="agenda-lista">
+            <% compromissos.forEach(function(c) { %><%- include('partials/compromisso_linha', { c: c, ocultarCaso: true }) %><% }) %>
+        </ul>
+        <% } else { %>
+        <p class="meta">Nenhum compromisso lançado para este caso.</p>
+        <% } %>
+    </div>
+</div>
+
+<%- include('partials/documentos_card', { dono: { campo: 'casoId', id: k.id } }) %>
+
+<%- include('partials/anotacoes', { acao: '/casos/' + k.id + '/anotacoes' }) %>
+
+<% if (pode('gerenciarProcessos')) { %>
+<div class="card">
+    <details <%= k.editando ? 'open' : '' %>>
+        <summary><h2 class="summary-titulo">Editar caso</h2></summary>
+        <form method="post" action="/casos/<%= k.id %>" class="form-vertical">
+            <%- include('partials/caso_campos') %>
+            <div class="form-acoes"><button type="submit">Salvar alterações</button></div>
+        </form>
+    </details>
+</div>
+<% } %>
+
+<% if (historico.length) { %>
+<div class="card">
+    <h2>Histórico</h2>
+    <ul class="timeline">
+        <% historico.forEach(function(h) { %>
+        <li><strong><%= ROTULOS_ACAO[h.acao] || h.acao %></strong> <span class="meta">— <%= h.usuario_nome || 'sistema' %>, <%= fmtDataHora(h.criado_em) %></span></li>
+        <% }) %>
+    </ul>
+</div>
+<% } %>
+
+<%- include('partials/foot') %>

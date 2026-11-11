@@ -1,0 +1,30 @@
+<% var titulo = modelo.nome %>
+<%- include('partials/head') %>
+<% var ativo = 'documentos' %>
+<%- include('partials/sidebar') %>
+
+<% var voltar = caso ? '/casos/' + caso.id : '/processos/' + processo.id; %>
+<% var qs = caso ? 'casoId=' + caso.id : 'processoId=' + processo.id; %>
+
+<a href="<%= voltar %>" class="btn ghost">&larr; voltar para <%= caso ? 'o caso' : 'o processo' %></a>
+
+<div class="content-header">
+    <h1><%= modelo.nome %></h1>
+    <div class="filtros acoes-topo">
+        <button type="button" class="secondary" data-copiar="#texto-gerado">Copiar texto</button>
+        <a class="btn" href="/documentos/modelos/<%= modelo.id %>/gerar?<%= qs %>&formato=doc">Baixar para o Word (.doc)</a>
+    </div>
+</div>
+
+<p class="meta"><%= caso ? 'Caso: ' + caso.titulo : 'Processo ' + fmtCnj(processo.numero_processo) %> · revise o texto antes de usar.</p>
+
+<% if (vazios.length) { %>
+<div class="msg-flash aviso">Campos sem valor, marcados no texto para completar: <%= vazios.map(function(v) { return CAMPOS[v] || v; }).join(', ') %>.</div>
+<% } %>
+
+<div class="card folha">
+    <div id="texto-gerado" class="texto-livre texto-gerado"><%= texto %></div>
+</div>
+<p class="meta" data-copiar-msg aria-live="polite"></p>
+
+<%- include('partials/foot') %>

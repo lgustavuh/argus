@@ -1,0 +1,43 @@
+<% var titulo = modelo.id ? 'Editar modelo' : 'Novo modelo' %>
+<%- include('partials/head') %>
+<% var ativo = 'documentos' %>
+<%- include('partials/sidebar') %>
+
+<a href="/documentos?aba=modelos" class="btn ghost">&larr; modelos</a>
+
+<div class="content-header">
+    <h1><%= modelo.id ? 'Editar modelo' : 'Novo modelo' %></h1>
+</div>
+
+<% if (erros.length) { %>
+<div class="msg-flash aviso"><% erros.forEach(function(e) { %><div><%= e %></div><% }) %></div>
+<% } %>
+
+<div class="grid-modelo">
+    <div class="card">
+        <form method="post" action="/documentos/modelos<%= modelo.id ? '/' + modelo.id : '' %>" class="form-vertical">
+            <label for="nome">Nome</label>
+            <input type="text" id="nome" name="nome" value="<%= modelo.nome %>" maxlength="150" required placeholder="ex.: Ofício de requisição de documentos">
+            <label for="descricao">Descrição <span class="meta">(opcional)</span></label>
+            <input type="text" id="descricao" name="descricao" value="<%= modelo.descricao || '' %>" maxlength="300">
+            <label for="conteudo">Texto</label>
+            <textarea id="conteudo" name="conteudo" rows="22" required data-campo-modelo><%= modelo.conteudo %></textarea>
+            <% if (modelo.id) { %>
+            <label class="checkbox"><input type="checkbox" name="ativo" value="true" <%= modelo.ativo ? 'checked' : '' %>> Modelo ativo (aparece para gerar documentos)</label>
+            <% } %>
+            <div class="form-acoes"><button type="submit">Salvar modelo</button></div>
+        </form>
+    </div>
+    <div class="card">
+        <h2>Campos disponíveis</h2>
+        <p class="meta">Clique para inserir no texto, na posição do cursor.</p>
+        <ul class="lista-campos">
+            <% Object.keys(CAMPOS).forEach(function(c) { %>
+            <li><button type="button" class="campo-chip mono" data-inserir="{{<%= c %>}}">{{<%= c %>}}</button> <span class="meta"><%= CAMPOS[c] %></span></li>
+            <% }) %>
+        </ul>
+        <p class="meta">Campos sem valor no processo ou caso aparecem como "[… não informado]" no texto gerado, para serem completados à mão.</p>
+    </div>
+</div>
+
+<%- include('partials/foot') %>

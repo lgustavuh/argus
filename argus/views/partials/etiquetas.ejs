@@ -1,0 +1,2 @@
+<%# Chips de etiquetas. Espera: lista (array de nomes), base ('/processos' ou '/casos') para o link de filtro. %>
+<% if (lista && lista.length) { %><span class="etiquetas"><% lista.forEach(function(e) { %><a class="etiqueta" href="<%= base %>?etiqueta=<%= encodeURIComponent(e) %>"><%= e %></a><% }) %></span><% } %>

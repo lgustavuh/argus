@@ -1,0 +1,9 @@
+<% if (paginacao && paginacao.totalPaginas > 1) { %>
+<nav class="paginacao" aria-label="Paginação">
+    <% if (paginacao.anterior) { %><a class="btn secondary" href="<%= paginacao.anterior %>">&larr; Anterior</a><% } else { %><span class="btn secondary desabilitado">&larr; Anterior</span><% } %>
+    <span class="meta">Página <%= paginacao.pagina %> de <%= paginacao.totalPaginas %> · <%= paginacao.total %> registro(s)</span>
+    <% if (paginacao.proxima) { %><a class="btn secondary" href="<%= paginacao.proxima %>">Próxima &rarr;</a><% } else { %><span class="btn secondary desabilitado">Próxima &rarr;</span><% } %>
+</nav>
+<% } else if (paginacao) { %>
+<p class="meta paginacao-total"><%= paginacao.total %> registro(s)</p>
+<% } %>

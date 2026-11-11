@@ -1,0 +1,138 @@
+<% var titulo = 'Indicadores' %>
+<%- include('partials/head') %>
+<% var ativo = 'indicadores' %>
+<%- include('partials/sidebar') %>
+
+<%
+    function duracao(horas) {
+        if (horas === null || horas === undefined) return '—';
+        var h = Number(horas);
+        if (h < 1) return 'menos de 1 hora';
+        if (h < 48) return Math.round(h) + ' h';
+        return Math.round(h / 24) + ' dias';
+    }
+    var maxMes = porMes.reduce(function(m, x) { return Math.max(m, x.total); }, 0);
+%>
+
+<div class="content-header">
+    <h1>Indicadores</h1>
+    <form method="get" action="/indicadores" class="filtros acoes-topo">
+        <label for="dias" class="meta">Período</label>
+        <select id="dias" name="dias" data-auto-submit>
+            <% Object.keys(PERIODOS).forEach(function(d) { %>
+            <option value="<%= d %>" <%= Number(d) === dias ? 'selected' : '' %>><%= PERIODOS[d] %></option>
+            <% }) %>
+        </select>
+        <noscript><button type="submit" class="secondary">Aplicar</button></noscript>
+    </form>
+</div>
+
+<div class="dashboard-grid indicadores-topo">
+    <div class="card">
+        <div class="card-title-row"><h2>Prazos <span class="meta">— data fatal nos <%= PERIODOS[dias] %></span></h2></div>
+        <div class="counter-list">
+            <div class="counter-row estatico">
+                <span class="num"><%= prazos.no_prazo %></span>
+                <span class="desc">Cumpridos até a data fatal<%= pctNoPrazo !== null ? ' (' + pctNoPrazo + '% dos concluídos)' : '' %></span>
+            </div>
+            <div class="counter-row estatico">
+                <span class="num"><%= prazos.apos_prazo %></span>
+                <span class="desc">Marcados como concluídos depois da data fatal</span>
+            </div>
+            <a class="counter-row" href="/agenda?tipo=prazo">
+                <span class="num <%= prazos.vencidos_abertos ? 'status-pendente' : '' %>"><%= prazos.vencidos_abertos %></span>
+                <span class="desc">Vencidos e ainda em aberto (qualquer data)</span>
+            </a>
+            <a class="counter-row" href="/agenda?tipo=prazo">
+                <span class="num"><%= prazos.a_vencer %></span>
+                <span class="desc">A vencer</span>
+            </a>
+        </div>
+        <p class="meta nota">"Depois da data fatal" pode ser só registro atrasado na agenda. Confira antes de concluir que houve perda de prazo.</p>
+    </div>
+
+    <div class="card">
+        <div class="card-title-row"><h2>Alertas <span class="meta">— criados nos <%= PERIODOS[dias] %></span></h2></div>
+        <div class="counter-list">
+            <div class="counter-row estatico">
+                <span class="num"><%= alertas.criados %></span>
+                <span class="desc">Movimentações que geraram alerta</span>
+            </div>
+            <div class="counter-row estatico">
+                <span class="num"><%= pctCiencia !== null ? pctCiencia + '%' : '—' %></span>
+                <span class="desc">Com ciência confirmada</span>
+            </div>
+            <div class="counter-row estatico">
+                <span class="num num-texto"><%= duracao(alertas.mediana_horas) %></span>
+                <span class="desc">Tempo típico até a ciência (mediana)</span>
+            </div>
+            <a class="counter-row" href="/alertas?status=escalado">
+                <span class="num"><%= alertas.escalados %></span>
+                <span class="desc">Escalaram por falta de ciência no prazo interno</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title-row"><h2>Agenda em aberto</h2></div>
+        <% if (agenda.length) { %>
+        <table class="tabela-compacta">
+            <thead><tr><th>Responsável</th><th>Abertos</th><th>Vencidos</th><th title="Com data nos próximos 7 dias">Próx. 7d</th></tr></thead>
+            <tbody>
+                <% agenda.forEach(function(r) { %>
+                <tr>
+                    <td><%= r.rotulo %></td>
+                    <td><%= r.abertos %></td>
+                    <td class="<%= r.vencidos ? 'valor-alerta' : '' %>"><%= r.vencidos %></td>
+                    <td><%= r.proximos_7 %></td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+        <% } else { %>
+        <p class="meta">Nenhum compromisso em aberto.</p>
+        <% } %>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Movimentações que podem abrir prazo, por mês <span class="meta">— últimos 12 meses</span></h2>
+    <% if (maxMes === 0) { %>
+    <p class="meta">Nenhuma movimentação relevante registrada nos últimos 12 meses.</p>
+    <% } else { %>
+    <div class="colunas" role="img" aria-label="<%= porMes.map(function(m) { return m.rotulo + ': ' + m.total; }).join('; ') %>">
+        <% porMes.forEach(function(m) { var pct = m.total ? Math.max(2, Math.round((m.total / maxMes) * 100)) : 0; %>
+        <div class="coluna" title="<%= m.rotulo %>: <%= m.total %> movimentaç<%= m.total === 1 ? 'ão' : 'ões' %>">
+            <span class="coluna-valor"><%= m.total === maxMes || m === porMes[porMes.length - 1] ? m.total : '' %></span>
+            <span class="coluna-trilho"><span class="coluna-barra" style="height: <%= pct %>%"></span></span>
+            <span class="coluna-rotulo"><%= m.rotulo.split('/')[0] %><span class="ano">/<%= m.rotulo.split('/')[1] %></span></span>
+        </div>
+        <% }) %>
+    </div>
+    <details class="tabela-dados">
+        <summary class="meta">Ver em tabela</summary>
+        <table class="tabela-compacta">
+            <thead><tr><th>Mês</th><th>Movimentações</th></tr></thead>
+            <tbody><% porMes.forEach(function(m) { %><tr><td><%= m.rotulo %></td><td><%= m.total %></td></tr><% }) %></tbody>
+        </table>
+    </details>
+    <% } %>
+</div>
+
+<div class="grid-3">
+    <div class="card">
+        <h2>Processos por classe</h2>
+        <%- include('partials/barras', { itens: porClasse, unidade: 'processo' }) %>
+    </div>
+    <div class="card">
+        <h2>Processos por órgão julgador</h2>
+        <%- include('partials/barras', { itens: porOrgao, unidade: 'processo' }) %>
+    </div>
+    <div class="card">
+        <h2>Processos por responsável</h2>
+        <%- include('partials/barras', { itens: porResponsavel, unidade: 'processo' }) %>
+    </div>
+</div>
+<p class="meta">Processos monitorados (não arquivados). Classes e órgãos: os 10 com mais processos.</p>
+
+<%- include('partials/foot') %>

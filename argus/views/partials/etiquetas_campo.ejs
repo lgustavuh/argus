@@ -1,0 +1,5 @@
+<%# Campo de etiquetas separadas por virgula, com sugestoes das ja existentes. Espera: valor (texto), etiquetasExistentes. %>
+<input type="text" id="etiquetas" name="etiquetas" value="<%= valor %>" list="etiquetas-existentes" class="campo-largo" placeholder="ex.: execução fiscal, saúde, urgente" autocomplete="off" data-etiquetas>
+<datalist id="etiquetas-existentes">
+    <% etiquetasExistentes.forEach(function(e) { %><option value="<%= e.nome %>"><% }) %>
+</datalist>

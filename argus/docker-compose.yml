@@ -1,0 +1,79 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: argus
+      # So vale na criacao do volume. Para trocar depois: ALTER USER argus PASSWORD '...'; e atualize o .env.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: argus
+    volumes:
+      - argus_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U argus"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://argus:${POSTGRES_PASSWORD}@postgres:5432/argus
+      BACKUP_DIR: /backups
+      DOCUMENTOS_DIR: /documentos
+    ports:
+      - "3000:3000"
+    # DNS fixo: o resolvedor padrao do Docker Desktop falhou de forma intermitente (EAI_AGAIN) ao
+    # resolver o DataJud. O DNS interno da rede (192.168.0.75) fica por ultimo, como reserva.
+    # Os nomes dos servicos (postgres) continuam resolvidos pelo DNS embutido do Docker.
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+      - 192.168.0.75
+    volumes:
+      # Somente leitura: a aplicacao so consulta a data do ultimo backup (Configuracoes > Geral).
+      - ./backups:/backups:ro
+      # Arquivos anexados a processos e casos (Documentos). Fora do banco: inclua esta pasta no backup do servidor.
+      - ./documentos:/documentos
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Backup diario do banco (pg_dump formato custom) em ./backups, mantendo os ultimos N dias.
+  # Restaurar: docker compose exec -T postgres pg_restore -U argus -d argus --clean < backups/arquivo.dump
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: argus
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: argus
+      BACKUP_RETENCAO_DIAS: ${BACKUP_RETENCAO_DIAS:-30}
+      TZ: America/Sao_Paulo
+    volumes:
+      - ./backups:/backups
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          arquivo=/backups/argus_$$(date +%Y%m%d_%H%M).dump
+          if pg_dump -Fc -f "$$arquivo.tmp"; then
+            mv "$$arquivo.tmp" "$$arquivo"
+            echo "[backup] gerado $$arquivo"
+          else
+            rm -f "$$arquivo.tmp"
+            echo "[backup] FALHA ao gerar backup"
+          fi
+          find /backups -name 'argus_*.dump' -mtime +$$BACKUP_RETENCAO_DIAS -delete
+          sleep 86400
+        done
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  argus_pgdata:

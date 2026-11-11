@@ -1,0 +1,37 @@
+<% var titulo = 'Entrar' %>
+<%- include('partials/head') %>
+<main class="auth">
+    <section class="auth-arte" aria-hidden="true">
+        <img class="auth-imagem" src="/img/login-argus.webp" alt="" width="1200" height="675">
+        <div class="auth-legenda">
+            <p class="auth-lema">Nenhum prazo passa despercebido.</p>
+            <p class="auth-orgao">Procuradoria-Geral do Município de Itaú de Minas/MG</p>
+        </div>
+    </section>
+
+    <section class="auth-painel">
+        <div class="auth-form">
+            <img class="auth-logo-movel" src="/img/argus-logo.svg" alt="Logotipo do Argus" width="48" height="48">
+            <h1>Acesse sua conta</h1>
+            <p class="meta">Sistema de acompanhamento processual e alertas de prazo.</p>
+
+            <form method="post" action="/login">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" name="email" autocomplete="username" required autofocus>
+                <label for="senha">Senha</label>
+                <input type="password" id="senha" name="senha" autocomplete="current-password" required>
+                <% if (erro) { %>
+                <p class="erro" role="alert"><%= erro %></p>
+                <% } %>
+                <button type="submit" class="auth-botao">Entrar</button>
+            </form>
+
+            <div class="auth-rodape">
+                <p>Esqueceu a senha? Fale com o setor de TI da Prefeitura.</p>
+                <p>Acesso restrito à equipe da Procuradoria. Os acessos são registrados para fins de auditoria.</p>
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

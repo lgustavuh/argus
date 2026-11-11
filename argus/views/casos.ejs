@@ -1,0 +1,70 @@
+<% var titulo = 'Casos' %>
+<%- include('partials/head') %>
+<% var ativo = 'casos' %>
+<%- include('partials/sidebar') %>
+
+<div class="content-header">
+    <h1>Casos</h1>
+    <% if (pode('gerenciarProcessos')) { %><a class="btn" href="/casos/novo">Novo caso</a><% } %>
+</div>
+
+<% if (msg) { %><div class="msg-flash"><%= msg %></div><% } %>
+
+<div class="card">
+    <div class="filtros abas-filtro">
+        <% [['aberto','Em andamento'],['encerrado','Encerrados'],['todos','Todos']].forEach(function(f) { %>
+        <a class="btn secondary <%= filtro.status === f[0] ? 'selecionado' : '' %>" href="/casos?status=<%= f[0] %>"><%= f[1] %></a>
+        <% }) %>
+    </div>
+    <form class="filtros" method="get" action="/casos">
+        <input type="hidden" name="status" value="<%= filtro.status %>">
+        <input type="search" name="busca" value="<%= filtro.busca || '' %>" placeholder="título, referência, interessado" class="campo-busca" aria-label="Buscar">
+        <select name="responsavelId" data-auto-submit aria-label="Responsável">
+            <option value="">Todos os responsáveis</option>
+            <% responsaveis.forEach(function(u) { %>
+            <option value="<%= u.id %>" <%= filtro.responsavelId === u.id ? 'selected' : '' %>><%= u.nome %></option>
+            <% }) %>
+        </select>
+        <select name="tipo" data-auto-submit aria-label="Tipo">
+            <option value="">Todos os tipos</option>
+            <% Object.keys(TIPOS).forEach(function(t) { %>
+            <option value="<%= t %>" <%= filtro.tipo === t ? 'selected' : '' %>><%= TIPOS[t] %></option>
+            <% }) %>
+        </select>
+        <% if (etiquetas.length || filtro.etiqueta) { %>
+        <select name="etiqueta" data-auto-submit aria-label="Etiqueta">
+            <option value="">Todas as etiquetas</option>
+            <% etiquetas.forEach(function(e) { %>
+            <option value="<%= e.nome %>" <%= (filtro.etiqueta || '').toLowerCase() === e.nome.toLowerCase() ? 'selected' : '' %>><%= e.nome %> (<%= e.casos %>)</option>
+            <% }) %>
+        </select>
+        <% } %>
+        <button type="submit" class="secondary">Filtrar</button>
+    </form>
+    <div class="tabela-rolavel">
+    <table>
+        <thead><tr><th>Caso</th><th>Tipo</th><th>Interessado</th><th>Responsável</th><th>Próximo compromisso</th><th></th></tr></thead>
+        <tbody>
+            <% casos.forEach(function(k) { %>
+            <tr class="<%= k.status === 'encerrado' ? 'inativo' : '' %>">
+                <td>
+                    <a href="/casos/<%= k.id %>"><%= k.titulo %></a><% if (k.referencia) { %> <span class="meta">· <%= k.referencia %></span><% } %>
+                    <%- include('partials/etiquetas', { lista: k.etiquetas, base: '/casos' }) %>
+                </td>
+                <td class="meta"><%= TIPOS[k.tipo] || k.tipo %></td>
+                <td><%= k.interessado || '—' %></td>
+                <td><%= k.responsavel_nome || '—' %></td>
+                <td class="meta"><%= k.proximo_compromisso ? fmtData(k.proximo_compromisso) : '—' %></td>
+                <td><a class="btn secondary" href="/casos/<%= k.id %>">Ver</a></td>
+            </tr>
+            <% }) %>
+            <% if (!casos.length) { %>
+            <tr><td colspan="6" class="meta">Nenhum caso encontrado.<% if (filtro.status === 'aberto' && !filtro.busca && pode('gerenciarProcessos')) { %> Cadastre procedimentos administrativos, notificações e consultas em "Novo caso".<% } %></td></tr>
+            <% } %>
+        </tbody>
+    </table>
+    </div>
+    <%- include('partials/paginacao') %>
+</div>
+
+<%- include('partials/foot') %>

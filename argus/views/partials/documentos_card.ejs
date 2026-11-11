@@ -1,0 +1,61 @@
+<%
+    // Documentos de um processo ou caso. Espera: documentos, modelos, dono ({ campo: 'processoId'|'casoId', id }).
+    var kb = function(n) { return n >= 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; };
+%>
+<div class="card">
+    <h2>Documentos</h2>
+    <% if (documentos.length) { %>
+    <div class="tabela-rolavel">
+    <table>
+        <thead><tr><th>Arquivo</th><th>Enviado</th><th></th></tr></thead>
+        <tbody>
+            <% documentos.forEach(function(d) { %>
+            <tr>
+                <td>
+                    <a href="/documentos/<%= d.id %>/baixar"><%= d.nome_original %></a> <span class="meta">· <%= kb(d.tamanho) %></span>
+                    <% if (d.descricao) { %><div class="meta"><%= d.descricao %></div><% } %>
+                </td>
+                <td class="meta"><%= d.enviado_por_nome || '—' %>, <%= fmtDataHora(d.criado_em) %></td>
+                <td class="acoes-linha">
+                    <% if (pode('gerenciarProcessos')) { %>
+                    <form method="post" action="/documentos/<%= d.id %>/excluir" class="inline" data-confirmar="Excluir o documento &quot;<%= d.nome_original %>&quot;? O arquivo é apagado do servidor.">
+                        <button type="submit" class="secondary">Excluir</button>
+                    </form>
+                    <% } %>
+                </td>
+            </tr>
+            <% }) %>
+        </tbody>
+    </table>
+    </div>
+    <% } else { %>
+    <p class="meta">Nenhum documento anexado.</p>
+    <% } %>
+
+    <% if (pode('gerenciarProcessos')) { %>
+    <form method="post" action="/documentos/enviar" enctype="multipart/form-data" class="form-envio">
+        <input type="hidden" name="<%= dono.campo %>" value="<%= dono.id %>">
+        <label for="arquivo">Anexar arquivo <span class="meta">(PDF, Word, planilha, imagem ou e-mail; até 25 MB)</span></label>
+        <div class="filtros">
+            <input type="file" id="arquivo" name="arquivo" required accept=".pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.ods,.csv,.jpg,.jpeg,.png,.eml,.msg">
+            <input type="text" name="descricao" maxlength="300" placeholder="descrição (opcional)" class="campo-busca" aria-label="Descrição do arquivo">
+            <button type="submit" class="secondary">Enviar</button>
+        </div>
+    </form>
+    <% } %>
+
+    <% if (modelos.length) { %>
+    <form method="get" action="/documentos/gerar" class="form-gerar">
+        <input type="hidden" name="<%= dono.campo %>" value="<%= dono.id %>">
+        <label for="modeloId">Gerar documento a partir de um modelo</label>
+        <div class="filtros">
+            <select id="modeloId" name="modeloId" required>
+                <% modelos.forEach(function(m) { %><option value="<%= m.id %>"><%= m.nome %></option><% }) %>
+            </select>
+            <button type="submit" class="secondary">Gerar</button>
+        </div>
+    </form>
+    <% } else if (pode('gerenciarProcessos')) { %>
+    <p class="meta">Para gerar ofícios e petições com os dados preenchidos, cadastre modelos em <a href="/documentos?aba=modelos">Documentos › Modelos</a>.</p>
+    <% } %>
+</div>

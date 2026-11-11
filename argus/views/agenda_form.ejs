@@ -1,0 +1,24 @@
+<% var titulo = 'Novo compromisso' %>
+<%- include('partials/head') %>
+<% var ativo = 'agenda' %>
+<%- include('partials/sidebar') %>
+
+<a href="/agenda" class="btn ghost">&larr; voltar</a>
+
+<div class="content-header">
+    <h1>Novo compromisso</h1>
+</div>
+
+<% if (erros.length) { %>
+<div class="msg-flash aviso"><% erros.forEach(function(e) { %><div><%= e %></div><% }) %></div>
+<% } %>
+
+<div class="card">
+    <form method="post" action="/agenda/novo" class="form-vertical">
+        <%- include('partials/compromisso_campos') %>
+        <div class="form-acoes"><button type="submit">Salvar na agenda</button></div>
+    </form>
+</div>
+
+<script src="/js/prazos.js"></script>
+<%- include('partials/foot') %>

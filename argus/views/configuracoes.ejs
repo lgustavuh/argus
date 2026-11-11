@@ -1,0 +1,367 @@
+<% var titulo = 'Configurações' %>
+<%- include('partials/head') %>
+<% var ativo = 'configuracoes' %>
+<%- include('partials/sidebar') %>
+
+<div class="content-header">
+    <h1>Configurações</h1>
+</div>
+
+<nav class="abas" aria-label="Seções de configuração">
+    <% [['geral','Geral'],['usuarios','Usuários'],['alertas','Alertas'],['email','E-mail'],['integracao','Integração'],['auditoria','Auditoria']].forEach(function(t) { %>
+    <a href="/configuracoes?aba=<%= t[0] %>" class="aba <%= aba === t[0] ? 'ativa' : '' %>" <%= aba === t[0] ? 'aria-current=page' : '' %>><%= t[1] %></a>
+    <% }) %>
+</nav>
+
+<% if (msg) { %><div class="msg-flash"><%= msg %></div><% } %>
+
+<% if (aba === 'geral') { %>
+<div class="grid-2">
+    <div class="card">
+        <h2>Prazos internos</h2>
+        <form method="post" action="/configuracoes/geral" class="form-vertical">
+            <label for="diasEscalonamento">Dias até escalar um alerta sem ciência</label>
+            <input type="number" id="diasEscalonamento" name="diasEscalonamento" min="1" max="60" value="<%= cfg['geral.dias_escalonamento'] %>" required>
+            <p class="meta">Passado esse prazo sem ciência, o alerta vira "escalado" e a equipe é avisada de novo. Vale para alertas criados a partir de agora.</p>
+            <label for="diasSemMovimentacao">Dias para considerar um processo "parado"</label>
+            <input type="number" id="diasSemMovimentacao" name="diasSemMovimentacao" min="7" max="3650" value="<%= cfg['geral.dias_sem_movimentacao'] %>" required>
+            <h3>Agenda</h3>
+            <label class="checkbox"><input type="checkbox" name="lembreteAtivo" value="true" <%= cfg['agenda.lembrete_ativo'] === 'true' ? 'checked' : '' %>> Enviar resumo diário da agenda por e-mail</label>
+            <p class="meta">Todo dia útil, a partir das 7h, cada responsável recebe os compromissos vencidos e os dos próximos dias. Quem não tem nada no período não recebe e-mail.</p>
+            <label for="diasAntecedencia">Dias de antecedência no resumo</label>
+            <input type="number" id="diasAntecedencia" name="diasAntecedencia" min="0" max="30" value="<%= cfg['agenda.dias_antecedencia'] %>" required>
+            <div class="form-acoes"><button type="submit">Salvar</button></div>
+        </form>
+    </div>
+    <div class="card">
+        <h2>Status do sistema</h2>
+        <ul class="checklist">
+            <li class="<%= seguranca.jwtForte ? 'ok' : 'falha' %>">Chave de sessão (JWT_SECRET) <%= seguranca.jwtForte ? 'forte' : 'fraca ou de exemplo — troque no .env' %></li>
+            <li class="<%= seguranca.cifragemDisponivel ? 'ok' : 'falha' %>">Chave de cifragem de senhas (ENCRYPTION_KEY) <%= seguranca.cifragemDisponivel ? 'configurada' : 'ausente' %></li>
+            <li class="<%= seguranca.datajudChaveConfigurada ? 'ok' : 'falha' %>">Chave da API do DataJud <%= seguranca.datajudChaveConfigurada ? 'configurada' : 'ausente' %></li>
+            <li class="<%= seguranca.cookieSeguro ? 'ok' : 'atencao' %>"><%= seguranca.cookieSeguro ? 'Acesso por HTTPS (cookie seguro)' : 'Acesso sem HTTPS — recomendado configurar um proxy com certificado antes de expor fora da rede interna' %></li>
+            <li class="<%= backup.disponivel && backup.ultimo ? 'ok' : 'falha' %>">
+                <% if (backup.disponivel && backup.ultimo) { %>
+                Backup diário do banco: último em <%= fmtDataHora(backup.ultimo.data) %> (<%= (backup.ultimo.tamanho / 1024).toFixed(0) %> KB, <%= backup.total %> cópia(s) guardada(s))
+                <% } else if (backup.disponivel) { %>
+                Backup configurado, mas nenhuma cópia gerada ainda
+                <% } else { %>
+                Pasta de backup não encontrada — verifique o serviço "backup" no docker-compose
+                <% } %>
+            </li>
+        </ul>
+    </div>
+</div>
+<% } %>
+
+<% if (aba === 'usuarios') { %>
+<div class="card">
+    <h2>Usuários</h2>
+    <div class="tabela-rolavel">
+    <table>
+        <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Último acesso</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+            <% usuarios.forEach(function(u) { %>
+            <tr class="<%= u.ativo ? '' : 'inativo' %>">
+                <td><%= u.nome %><% if (u.deve_trocar_senha) { %> <span class="badge neutro" title="Precisa trocar a senha no próximo acesso">senha provisória</span><% } %></td>
+                <td><%= u.email %></td>
+                <td>
+                    <% if (u.id === usuario.id) { %>
+                    <%= ROTULOS_PAPEL[u.papel] %>
+                    <% } else { %>
+                    <form class="inline" method="post" action="/configuracoes/usuarios/<%= u.id %>/papel">
+                        <select name="papel" data-auto-submit aria-label="Perfil de <%= u.nome %>">
+                            <% PAPEIS_VALIDOS.forEach(function(p) { %>
+                            <option value="<%= p %>" <%= u.papel === p ? 'selected' : '' %>><%= ROTULOS_PAPEL[p] %></option>
+                            <% }) %>
+                        </select>
+                    </form>
+                    <% } %>
+                </td>
+                <td class="meta"><%= fmtDataHora(u.ultimo_login_em) %></td>
+                <td>
+                    <% if (u.id === usuario.id) { %>
+                    <span class="badge neutro">você</span>
+                    <% } else { %>
+                    <form class="inline" method="post" action="/configuracoes/usuarios/<%= u.id %>/ativo"
+                          data-confirmar="<%= u.ativo ? 'Desativar ' + u.nome + '? A sessão dele é encerrada na hora.' : 'Reativar ' + u.nome + '?' %>">
+                        <input type="hidden" name="ativo" value="<%= u.ativo ? 'false' : 'true' %>">
+                        <button type="submit" class="secondary"><%= u.ativo ? 'Desativar' : 'Ativar' %></button>
+                    </form>
+                    <% } %>
+                </td>
+                <td>
+                    <% if (u.id !== usuario.id) { %>
+                    <details>
+                        <summary class="btn secondary">Redefinir senha</summary>
+                        <form method="post" action="/configuracoes/usuarios/<%= u.id %>/senha" class="filtros detalhe-form">
+                            <input type="password" name="senha" placeholder="senha provisória (mín. 10)" minlength="10" required autocomplete="new-password">
+                            <button type="submit">Salvar</button>
+                        </form>
+                    </details>
+                    <% } %>
+                </td>
+            </tr>
+            <% }) %>
+        </tbody>
+    </table>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h2>Novo usuário</h2>
+        <form method="post" action="/configuracoes/usuarios" class="form-vertical">
+            <label for="novoNome">Nome completo</label>
+            <input type="text" id="novoNome" name="nome" required>
+            <label for="novoEmail">E-mail</label>
+            <input type="email" id="novoEmail" name="email" required>
+            <label for="novoPapel">Perfil</label>
+            <select id="novoPapel" name="papel">
+                <% PAPEIS_VALIDOS.forEach(function(p) { %><option value="<%= p %>"><%= ROTULOS_PAPEL[p] %></option><% }) %>
+            </select>
+            <label for="novaSenha">Senha provisória</label>
+            <input type="password" id="novaSenha" name="senha" minlength="10" required autocomplete="new-password">
+            <p class="meta">O usuário será obrigado a trocar a senha no primeiro acesso.</p>
+            <div class="form-acoes"><button type="submit">Criar usuário</button></div>
+        </form>
+    </div>
+    <div class="card">
+        <h2>O que cada perfil pode fazer</h2>
+        <table class="tabela-compacta">
+            <thead><tr><th></th><% PAPEIS_VALIDOS.forEach(function(p) { %><th><%= ROTULOS_PAPEL[p] %></th><% }) %></tr></thead>
+            <tbody>
+                <tr><td>Ver todos os processos e alertas</td><% PAPEIS_VALIDOS.forEach(function() { %><td>✓</td><% }) %></tr>
+                <% [['darCiencia','Dar ciência em alertas'],['gerenciarProcessos','Cadastrar, importar e arquivar processos'],['rodarSync','Disparar atualização manual'],['configurar','Configurações e usuários']].forEach(function(acao) { %>
+                <tr><td><%= acao[1] %></td><% PAPEIS_VALIDOS.forEach(function(p) { %><td><%= PERMISSOES[acao[0]].includes(p) ? '✓' : '—' %></td><% }) %></tr>
+                <% }) %>
+                <tr><td>Recebe alertas por e-mail</td><% PAPEIS_VALIDOS.forEach(function(p) { %><td><%= p === 'admin' ? '—' : '✓' %></td><% }) %></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<% } %>
+
+<% if (aba === 'alertas') { %>
+<div class="card">
+    <h2>Movimentações que geram alerta</h2>
+    <p class="meta">Uma movimentação vira alerta quando o código dela na Tabela Processual Unificada (TPU/CNJ) está nesta
+    lista. O peso define a ordem no painel (5 = mais urgente). A lista inicial foi conferida contra dados reais do TJMG
+    (comarca de Pratápolis, out/2026); ajuste conforme a rotina da Procuradoria.</p>
+    <div class="tabela-rolavel">
+    <table>
+        <thead><tr><th>Código</th><th>Movimentação</th><th>Peso</th><th></th></tr></thead>
+        <tbody>
+            <% codigosTpu.forEach(function(c) { %>
+            <tr>
+                <td class="mono"><%= c.codigo %></td>
+                <td><%= c.nome %></td>
+                <td><span class="urgencia <%= c.peso_urgencia >= 4 ? 'urgencia-alta' : (c.peso_urgencia >= 2 ? 'urgencia-media' : 'urgencia-baixa') %>"></span><%= c.peso_urgencia %></td>
+                <td>
+                    <form class="inline" method="post" action="/configuracoes/codigos-tpu/<%= c.codigo %>/remover" data-confirmar="Remover o código <%= c.codigo %>? Movimentações com ele deixam de gerar alerta.">
+                        <button type="submit" class="secondary">Remover</button>
+                    </form>
+                </td>
+            </tr>
+            <% }) %>
+            <% if (!codigosTpu.length) { %><tr><td colspan="4" class="meta">Nenhum código cadastrado — nenhuma movimentação vai gerar alerta.</td></tr><% } %>
+        </tbody>
+    </table>
+    </div>
+    <h3>Adicionar ou alterar</h3>
+    <form method="post" action="/configuracoes/codigos-tpu" class="filtros">
+        <input type="number" name="codigo" placeholder="código TPU" required aria-label="Código TPU">
+        <input type="text" name="nome" placeholder="descrição" required class="campo-largo" aria-label="Descrição">
+        <input type="number" name="pesoUrgencia" placeholder="peso" min="1" max="5" value="3" aria-label="Peso de urgência">
+        <button type="submit">Salvar</button>
+    </form>
+    <p class="meta">Informar um código já existente atualiza a descrição e o peso. O código de cada movimentação aparece na linha do tempo do processo.</p>
+</div>
+<% } %>
+
+<% if (aba === 'email') { %>
+<div class="grid-2">
+    <div class="card">
+        <h2>Servidor de e-mail (SMTP)</h2>
+        <% if (!cifragemDisponivel) { %><div class="msg-flash aviso">ENCRYPTION_KEY não configurada no servidor: a senha SMTP não pode ser salva.</div><% } %>
+        <form method="post" action="/configuracoes/email" class="form-vertical">
+            <label class="checkbox"><input type="checkbox" name="ativo" value="true" <%= cfg['email.ativo'] === 'true' ? 'checked' : '' %>> Enviar e-mails de alerta</label>
+            <p class="meta">Desativado, os alertas continuam aparecendo no sistema (contador no menu lateral); só o e-mail deixa de sair.</p>
+            <label for="smtpHost">Servidor SMTP</label>
+            <input type="text" id="smtpHost" name="smtpHost" value="<%= cfg['email.smtp_host'] %>" placeholder="smtp.exemplo.gov.br">
+            <label for="smtpPorta">Porta</label>
+            <input type="number" id="smtpPorta" name="smtpPorta" value="<%= cfg['email.smtp_porta'] %>" min="1" max="65535">
+            <p class="meta">587 (STARTTLS) é o padrão; 465 usa SSL direto.</p>
+            <label for="smtpUsuario">Usuário</label>
+            <input type="text" id="smtpUsuario" name="smtpUsuario" value="<%= cfg['email.smtp_usuario'] %>" autocomplete="off">
+            <label for="smtpSenha">Senha</label>
+            <input type="password" id="smtpSenha" name="smtpSenha" placeholder="<%= cfg['email.smtp_senha'] ? '•••••••• (salva — deixe em branco para manter)' : 'senha do servidor SMTP' %>" autocomplete="new-password">
+            <% if (cfg['email.smtp_senha']) { %><label class="checkbox"><input type="checkbox" name="removerSenha" value="true"> Remover senha salva</label><% } %>
+            <label for="remetente">Remetente</label>
+            <input type="email" id="remetente" name="remetente" value="<%= cfg['email.remetente'] %>" placeholder="argus@itaudeminas.mg.gov.br">
+            <label for="fallback">E-mail geral da Procuradoria (opcional)</label>
+            <input type="email" id="fallback" name="fallback" value="<%= cfg['email.fallback'] %>">
+            <p class="meta">Usado só se não houver nenhum usuário ativo que receba alertas.</p>
+            <div class="form-acoes"><button type="submit">Salvar</button></div>
+        </form>
+    </div>
+    <div class="card">
+        <h2>Testar envio</h2>
+        <p class="meta">Envia uma mensagem de teste para o seu e-mail (<strong><%= usuario.email %></strong>) usando a configuração salva — mesmo com o envio de alertas desativado.</p>
+        <form method="post" action="/configuracoes/email/teste">
+            <button type="submit" class="secondary" <%= cfg['email.smtp_host'] ? '' : 'disabled' %>>Enviar e-mail de teste</button>
+        </form>
+        <h3>Quem recebe</h3>
+        <ul class="meta">
+            <li><strong>Alerta novo:</strong> procuradores, advogados e assistente jurídica ativos.</li>
+            <li><strong>Alerta escalado:</strong> os mesmos, de novo, com o assunto "ESCALADO"; o procurador fica registrado como destino do escalonamento.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Aparência dos e-mails</h2>
+    <p class="meta">Vale para os alertas novos, os escalados e o e-mail de teste. Use "Pré-visualizar" para ver o resultado
+    com dados fictícios antes de salvar.</p>
+    <form method="post" action="/configuracoes/email/aparencia" class="grid-2 form-vertical">
+        <div>
+            <label for="nomeRemetente">Nome do remetente</label>
+            <input type="text" id="nomeRemetente" name="nomeRemetente" value="<%= cfg['email.nome_remetente'] %>" maxlength="120" class="campo-largo">
+            <p class="meta">Aparece na caixa de entrada no lugar do endereço (ex.: "Argus — Procuradoria").</p>
+            <label for="prefixoAssunto">Prefixo do assunto</label>
+            <input type="text" id="prefixoAssunto" name="prefixoAssunto" value="<%= cfg['email.prefixo_assunto'] %>" maxlength="40">
+            <p class="meta">Ex.: "[Argus]" → "[Argus] Nova movimentação — 5001098-52…". Deixe vazio para não usar.</p>
+            <label for="cabecalho">Título do cabeçalho</label>
+            <input type="text" id="cabecalho" name="cabecalho" value="<%= cfg['email.cabecalho'] %>" maxlength="150" class="campo-largo">
+            <label for="cor">Cor principal (cabeçalho e botão)</label>
+            <div class="filtros campo-cor">
+                <input type="color" id="cor" name="cor" value="<%= cfg['email.cor'] %>" data-espelho="#corHex">
+                <span class="mono meta" id="corHex"><%= cfg['email.cor'] %></span>
+            </div>
+            <p class="meta">Prefira tons escuros: o texto do cabeçalho e do botão é branco.</p>
+        </div>
+        <div>
+            <label for="rodape">Rodapé</label>
+            <textarea id="rodape" name="rodape" rows="5" maxlength="1000"><%= cfg['email.rodape'] %></textarea>
+            <p class="meta">Ex.: identificação do órgão, telefone da Procuradoria, aviso de "não responda".</p>
+            <label class="checkbox"><input type="checkbox" name="linkOrigem" value="true" <%= cfg['email.link_origem'] !== 'false' ? 'checked' : '' %>> Incluir link para consultar o processo no site do tribunal</label>
+            <label for="tipoPrevia">Modelo para pré-visualizar</label>
+            <select id="tipoPrevia" name="tipo">
+                <option value="novo">Nova movimentação</option>
+                <option value="escalado">Alerta escalado</option>
+                <option value="teste">E-mail de teste</option>
+            </select>
+            <div class="form-acoes filtros">
+                <button type="submit">Salvar aparência</button>
+                <button type="submit" class="secondary" formaction="/configuracoes/email/previa" formmethod="get" formtarget="_blank">Pré-visualizar</button>
+            </div>
+        </div>
+    </form>
+    <form method="post" action="/configuracoes/email/aparencia" data-confirmar="Voltar a aparência dos e-mails para o padrão?">
+        <input type="hidden" name="restaurar" value="true">
+        <button type="submit" class="btn ghost">Restaurar padrão</button>
+    </form>
+</div>
+<% } %>
+
+<% if (aba === 'integracao') { %>
+<div class="grid-2">
+    <div class="card">
+        <h2>Fonte de dados e atualização automática</h2>
+        <form method="post" action="/configuracoes/integracao" class="form-vertical">
+            <label for="fonte">Fonte de dados dos processos</label>
+            <select id="fonte" name="fonte">
+                <% fontes.forEach(function(f) { %>
+                <option value="<%= f.nome %>" <%= cfg['sync.fonte'] === f.nome ? 'selected' : '' %> <%= f.implementado ? '' : 'disabled' %>><%= f.rotulo %></option>
+                <% }) %>
+            </select>
+            <label class="checkbox"><input type="checkbox" name="syncAtivo" value="true" <%= cfg['sync.ativo'] === 'true' ? 'checked' : '' %>> Atualização automática ativada</label>
+            <label for="intervaloHoras">Intervalo entre atualizações (horas)</label>
+            <input type="number" id="intervaloHoras" name="intervaloHoras" min="1" max="48" value="<%= cfg['sync.intervalo_horas'] %>">
+            <label for="janelaCargaInicial">Na primeira consulta de um processo, gerar alerta só para movimentações dos últimos (dias)</label>
+            <input type="number" id="janelaCargaInicial" name="janelaCargaInicial" min="0" max="90" value="<%= cfg['sync.janela_carga_inicial_dias'] %>">
+            <p class="meta">O histórico completo sempre entra na linha do tempo; este limite só evita alertas de movimentações antigas já tratadas.</p>
+            <div class="form-acoes"><button type="submit">Salvar</button></div>
+        </form>
+    </div>
+    <div class="card">
+        <h2>Última atualização</h2>
+        <% if (sync.emAndamento) { %>
+        <p>Sincronização em andamento…</p>
+        <% } else if (sync.ultimoEm && sync.ultimoResumo) { %>
+        <dl class="trilha">
+            <dt>Quando</dt><dd><%= fmtDataHora(sync.ultimoEm) %></dd>
+            <dt>Origem</dt><dd><%= sync.ultimoResumo.origem %></dd>
+            <dt>Processos consultados</dt><dd><%= sync.ultimoResumo.processosConsultados %></dd>
+            <dt>Localizados / não localizados</dt><dd><%= sync.ultimoResumo.localizados %> / <%= sync.ultimoResumo.naoLocalizados %></dd>
+            <dt>Movimentos novos</dt><dd><%= sync.ultimoResumo.movimentosNovos %></dd>
+            <dt>Alertas criados</dt><dd><%= sync.ultimoResumo.alertasCriados %></dd>
+            <dt>Erros</dt><dd><%= sync.ultimoResumo.erros.length ? sync.ultimoResumo.erros.map(function(e) { return (e.tribunal || e.processo || e.etapa) + ': ' + e.erro; }).join(' | ') : 'nenhum' %></dd>
+        </dl>
+        <% } else { %>
+        <p class="meta">Nenhuma atualização completa executada ainda.</p>
+        <% } %>
+        <form method="post" action="/sync/run">
+            <button type="submit" class="secondary" <%= sync.emAndamento ? 'disabled' : '' %>>Atualizar agora</button>
+        </form>
+        <h3>DataJud</h3>
+        <p class="meta">Chave da API pública: <strong><%= datajudChaveConfigurada ? 'configurada' : 'ausente' %></strong> (definida no arquivo .env do servidor — ver README).
+        O DataJud não informa as partes do processo, então só acompanha os números cadastrados, com a defasagem de atualização do próprio CNJ.</p>
+    </div>
+</div>
+
+<div class="card">
+    <h2>MNI — Modelo Nacional de Interoperabilidade (TJMG)</h2>
+    <p class="meta">Aguardando credenciamento. Quando o TJMG liberar o acesso, preencha os dados abaixo; a fonte "MNI" passa
+    a ficar disponível após a implementação do conector (ver docs/DOCUMENTO_TECNICO.md, seção "Integração MNI").
+    Com o MNI, o Argus passa a receber os avisos de citação/intimação dirigidos ao Município e a cadastrar processos novos automaticamente.</p>
+    <% if (!cifragemDisponivel) { %><div class="msg-flash aviso">ENCRYPTION_KEY não configurada no servidor: a senha do MNI não pode ser salva.</div><% } %>
+    <form method="post" action="/configuracoes/integracao/mni" class="grid-2 form-vertical">
+        <div>
+            <label for="wsdlUrl">Endereço do serviço (WSDL)</label>
+            <input type="url" id="wsdlUrl" name="wsdlUrl" value="<%= cfg['mni.wsdl_url'] %>" placeholder="https://.../intercomunicacao?wsdl" class="campo-largo">
+            <label for="idConsultante">Identificador do consultante</label>
+            <input type="text" id="idConsultante" name="idConsultante" value="<%= cfg['mni.id_consultante'] %>" autocomplete="off" class="campo-largo">
+            <label for="senhaConsultante">Senha do consultante</label>
+            <input type="password" id="senhaConsultante" name="senhaConsultante" placeholder="<%= cfg['mni.senha_consultante'] ? '•••••••• (salva — deixe em branco para manter)' : '' %>" autocomplete="new-password" class="campo-largo">
+        </div>
+        <div>
+            <label for="observacoes">Observações (nº do ofício, protocolo, contato no TJMG, validade do certificado…)</label>
+            <textarea id="observacoes" name="observacoes" rows="6"><%= cfg['mni.observacoes'] %></textarea>
+            <div class="form-acoes"><button type="submit">Salvar dados do MNI</button></div>
+        </div>
+    </form>
+</div>
+<% } %>
+
+<% if (aba === 'auditoria') { %>
+<div class="card">
+    <h2>Trilha de auditoria</h2>
+    <p class="meta">Registro de acessos e de todas as ações que alteram dados. Senhas e valores sensíveis nunca são registrados.</p>
+    <div class="tabela-rolavel">
+    <table>
+        <thead><tr><th>Quando</th><th>Usuário</th><th>Ação</th><th>Referência</th><th>Detalhes</th><th>IP</th></tr></thead>
+        <tbody>
+            <% registros.forEach(function(r) { %>
+            <tr>
+                <td class="meta"><%= fmtDataHora(r.criado_em) %></td>
+                <td><%= r.usuario_nome || '—' %></td>
+                <td><%= ROTULOS_ACAO[r.acao] || r.acao %></td>
+                <td>
+                    <% if (r.entidade === 'processo' && r.entidade_id) { %><a href="/processos/<%= r.entidade_id %>">processo #<%= r.entidade_id %></a>
+                    <% } else if (r.entidade === 'alerta' && r.entidade_id) { %><a href="/alertas/<%= r.entidade_id %>">alerta #<%= r.entidade_id %></a>
+                    <% } else if (r.entidade) { %><%= r.entidade %><%= r.entidade_id ? ' #' + r.entidade_id : '' %><% } else { %>—<% } %>
+                </td>
+                <td class="meta detalhes-json"><%= r.detalhes ? JSON.stringify(r.detalhes) : '' %></td>
+                <td class="meta mono"><%= r.ip || '' %></td>
+            </tr>
+            <% }) %>
+            <% if (!registros.length) { %><tr><td colspan="6" class="meta">Nenhum registro.</td></tr><% } %>
+        </tbody>
+    </table>
+    </div>
+    <%- include('partials/paginacao') %>
+</div>
+<% } %>
+
+<%- include('partials/foot') %>

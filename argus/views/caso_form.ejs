@@ -1,0 +1,26 @@
+<% var titulo = 'Novo caso' %>
+<%- include('partials/head') %>
+<% var ativo = 'casos' %>
+<%- include('partials/sidebar') %>
+
+<a href="/casos" class="btn ghost">&larr; voltar</a>
+
+<div class="content-header">
+    <h1>Novo caso</h1>
+</div>
+
+<% if (erros.length) { %>
+<div class="msg-flash aviso"><% erros.forEach(function(e) { %><div><%= e %></div><% }) %></div>
+<% } %>
+
+<div class="card">
+    <p class="meta">Caso é um assunto acompanhado pela Procuradoria sem número de processo judicial: procedimento
+    administrativo, notificação extrajudicial, consulta de secretaria. Prazos, anotações e documentos podem ser
+    registrados nele como num processo.</p>
+    <form method="post" action="/casos/novo" class="form-vertical">
+        <%- include('partials/caso_campos') %>
+        <div class="form-acoes"><button type="submit">Cadastrar caso</button></div>
+    </form>
+</div>
+
+<%- include('partials/foot') %>

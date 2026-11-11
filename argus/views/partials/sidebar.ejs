@@ -1,0 +1,112 @@
+<div class="app">
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <img class="sidebar-logo" src="/img/argus-logo.svg" alt="" width="28" height="28">
+            <span>
+                <strong>Argus</strong>
+                <span>Procuradoria Itaú de Minas</span>
+            </span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="/painel" class="nav-item <%= typeof ativo !== 'undefined' && ativo === 'painel' ? 'active' : '' %>">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                    <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                    <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+                    <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                </svg>
+                Painel de controle
+            </a>
+            <a href="/alertas?status=abertos" class="nav-item <%= typeof ativo !== 'undefined' && ativo === 'alertas' ? 'active' : '' %>">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                Alertas
+                <% if (typeof alertasAbertos !== 'undefined' && alertasAbertos > 0) { %>
+                <span class="nav-count" title="Alertas sem ciência"><%= alertasAbertos %></span>
+                <% } %>
+            </a>
+            <a href="/agenda" class="nav-item <%= typeof ativo !== 'undefined' && ativo === 'agenda' ? 'active' : '' %>">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                Agenda
+                <% if (typeof compromissosVencidos !== 'undefined' && compromissosVencidos > 0) { %>
+                <span class="nav-count" title="Compromissos vencidos sem conclusão"><%= compromissosVencidos %></span>
+                <% } %>
+            </a>
+            <a href="/processos" class="nav-item <%= typeof ativo !== 'undefined' && ativo === 'processos' ? 'active' : '' %>">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                </svg>
+                Processos
+            </a>
+            <a href="/casos" class="nav-item <%= typeof ativo !== 'undefined' && ativo === 'casos' ? 'active' : '' %>">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+                Casos
+            </a>
+            <a href="/documentos" class="nav-item <%= typeof ativo !== 'undefined' && ativo === 'documentos' ? 'active' : '' %>">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="9" y1="13" x2="15" y2="13"></line>
+                    <line x1="9" y1="17" x2="15" y2="17"></line>
+                </svg>
+                Documentos
+            </a>
+            <a href="/indicadores" class="nav-item <%= typeof ativo !== 'undefined' && ativo === 'indicadores' ? 'active' : '' %>">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                Indicadores
+            </a>
+            <% if (pode('configurar')) { %>
+            <a href="/configuracoes" class="nav-item <%= typeof ativo !== 'undefined' && ativo === 'configuracoes' ? 'active' : '' %>">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="4" y1="21" x2="4" y2="14"></line>
+                    <line x1="4" y1="10" x2="4" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12" y2="3"></line>
+                    <line x1="20" y1="21" x2="20" y2="16"></line>
+                    <line x1="20" y1="12" x2="20" y2="3"></line>
+                    <line x1="1" y1="14" x2="7" y2="14"></line>
+                    <line x1="9" y1="8" x2="15" y2="8"></line>
+                    <line x1="17" y1="16" x2="23" y2="16"></line>
+                </svg>
+                Configurações
+            </a>
+            <% } %>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-name"><%= usuario.nome %></div>
+            <div class="user-papel"><%= rotuloPapel %></div>
+            <a href="/minha-conta" class="nav-item <%= typeof ativo !== 'undefined' && ativo === 'conta' ? 'active' : '' %>">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                Minha conta
+            </a>
+            <a href="/logout" class="nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                Sair
+            </a>
+        </div>
+    </aside>
+
+    <main class="content">

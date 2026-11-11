@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Argus">
+  <!-- Argus: balanca da justica cujo fulcro e um olho (vigilancia — Argos Panoptes, o gigante de cem olhos). -->
+  <rect width="48" height="48" rx="11" fill="#1f5aa6"/>
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15 12.5 Q24 4.5 33 12.5 Q24 20.5 15 12.5 Z" stroke-width="2"/>
+    <path d="M24 20 V36.5" stroke-width="2.4"/>
+    <path d="M17.5 37.5 H30.5" stroke-width="2.6"/>
+    <path d="M11 23 H37" stroke-width="2.2"/>
+    <path d="M11 23 L7.8 31 M11 23 L14.2 31 M37 23 L33.8 31 M37 23 L40.2 31" stroke-width="1.5"/>
+  </g>
+  <circle cx="24" cy="12.5" r="2.6" fill="#fff"/>
+  <path d="M7 31 H15 Q11 36 7 31 Z M33 31 H41 Q37 36 33 31 Z" fill="#fff"/>
+</svg>

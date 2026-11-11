@@ -1,0 +1,23 @@
+<%# Anotacoes internas de um processo ou caso. Espera: anotacoes, acao (URL do POST). %>
+<div class="card">
+    <h2>Anotações internas</h2>
+    <% if (pode('gerenciarProcessos')) { %>
+    <form method="post" action="<%= acao %>" class="form-anotacao">
+        <label for="texto-anotacao" class="sr-only">Nova anotação</label>
+        <textarea id="texto-anotacao" name="texto" rows="3" maxlength="5000" required placeholder="Registre uma providência, contato, decisão interna…"></textarea>
+        <div class="form-acoes"><button type="submit" class="secondary">Registrar anotação</button></div>
+    </form>
+    <% } %>
+    <% if (anotacoes.length) { %>
+    <ul class="anotacoes">
+        <% anotacoes.forEach(function(n) { %>
+        <li>
+            <span class="meta"><strong><%= n.autor_nome || '—' %></strong> · <%= fmtDataHora(n.criado_em) %></span>
+            <p class="texto-livre"><%= n.texto %></p>
+        </li>
+        <% }) %>
+    </ul>
+    <% } else { %>
+    <p class="meta">Nenhuma anotação ainda. As anotações ficam visíveis para toda a equipe e não podem ser apagadas.</p>
+    <% } %>
+</div>

@@ -1,0 +1,87 @@
+<% var titulo = 'Processos' %>
+<%- include('partials/head') %>
+<% var ativo = 'processos' %>
+<%- include('partials/sidebar') %>
+
+<% var ROTULO_SITUACAO = { aguardando: 'aguardando consulta', localizado: 'localizado', nao_localizado: 'não localizado' }; %>
+
+<div class="content-header">
+    <h1><%= filtro.arquivados ? 'Processos arquivados' : 'Processos' %></h1>
+    <% if (pode('gerenciarProcessos')) { %><a class="btn" href="/processos/novo">Cadastrar processos</a><% } %>
+</div>
+
+<% if (msg) { %><div class="msg-flash"><%= msg %></div><% } %>
+
+<div class="card">
+    <form class="filtros" method="get" action="/processos">
+        <% if (filtro.arquivados) { %><input type="hidden" name="arquivados" value="true"><% } %>
+        <input type="search" name="busca" value="<%= filtro.busca || '' %>" placeholder="número, classe ou observação" class="campo-busca">
+        <select name="tribunal" data-auto-submit>
+            <option value="">Todos os tribunais</option>
+            <% tribunais.forEach(function(t) { %>
+            <option value="<%= t %>" <%= filtro.tribunal === t ? 'selected' : '' %>><%= t.toUpperCase() %></option>
+            <% }) %>
+        </select>
+        <select name="responsavelId" data-auto-submit>
+            <option value="">Todos os responsáveis</option>
+            <% responsaveis.forEach(function(p) { %>
+            <option value="<%= p.id %>" <%= String(filtro.responsavelId) === String(p.id) ? 'selected' : '' %>><%= p.nome %></option>
+            <% }) %>
+        </select>
+        <% if (etiquetas.length || filtro.etiqueta) { %>
+        <select name="etiqueta" data-auto-submit aria-label="Etiqueta">
+            <option value="">Todas as etiquetas</option>
+            <% etiquetas.forEach(function(e) { %>
+            <option value="<%= e.nome %>" <%= (filtro.etiqueta || '').toLowerCase() === e.nome.toLowerCase() ? 'selected' : '' %>><%= e.nome %> (<%= e.processos %>)</option>
+            <% }) %>
+        </select>
+        <% } %>
+        <select name="situacao" data-auto-submit>
+            <option value="">Qualquer situação</option>
+            <% Object.keys(ROTULO_SITUACAO).forEach(function(s) { %>
+            <option value="<%= s %>" <%= filtro.situacao === s ? 'selected' : '' %>><%= ROTULO_SITUACAO[s] %></option>
+            <% }) %>
+        </select>
+        <button type="submit" class="secondary">Filtrar</button>
+        <% if (filtro.arquivados) { %>
+        <a class="btn ghost" href="/processos">ver monitorados</a>
+        <% } else { %>
+        <a class="btn ghost" href="/processos?arquivados=true">ver arquivados</a>
+        <% } %>
+    </form>
+    <% if (filtro.semResponsavel) { %><p class="meta">Mostrando apenas processos sem responsável. <a href="/processos">Limpar</a></p><% } %>
+    <div class="tabela-rolavel">
+    <table>
+        <thead>
+            <tr>
+                <th>Número</th>
+                <th>Tribunal</th>
+                <th>Classe</th>
+                <th>Situação</th>
+                <th>Responsável</th>
+                <th>Última movimentação</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <% processos.forEach(function(p) { %>
+            <tr>
+                <td><span class="mono"><%= fmtCnj(p.numero_processo) %></span><%- include('partials/etiquetas', { lista: p.etiquetas, base: '/processos' }) %></td>
+                <td><%= p.tribunal.toUpperCase() %><%= p.graus ? ' · ' + p.graus : '' %></td>
+                <td><%= p.classe_nome || '—' %></td>
+                <td><span class="badge neutro <%= p.situacao_fonte %>"><%= ROTULO_SITUACAO[p.situacao_fonte] || p.situacao_fonte %></span></td>
+                <td><%= p.procurador_nome || '—' %></td>
+                <td class="meta"><%= p.ultima_movimentacao ? fmtDataHora(p.ultima_movimentacao) : '—' %></td>
+                <td><a class="btn secondary" href="/processos/<%= p.id %>">Ver</a></td>
+            </tr>
+            <% }) %>
+            <% if (!processos.length) { %>
+            <tr><td colspan="7" class="meta">Nenhum processo encontrado.</td></tr>
+            <% } %>
+        </tbody>
+    </table>
+    </div>
+    <%- include('partials/paginacao') %>
+</div>
+
+<%- include('partials/foot') %>

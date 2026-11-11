@@ -1,0 +1,35 @@
+<%
+    // Uma linha de compromisso. Espera: c (compromisso), hoje ('AAAA-MM-DD'), TIPOS opcional,
+    // ocultarProcesso (true na tela do proprio processo).
+    var rotTipo = (typeof TIPOS !== 'undefined' && TIPOS[c.tipo]) || ({ prazo: 'Prazo', audiencia: 'Audiência', tarefa: 'Tarefa', evento: 'Evento' })[c.tipo] || c.tipo;
+    var aberto = c.status === 'aberto';
+    var vencido = aberto && c.data < hoje;
+    var diasAtraso = vencido ? Math.round((Date.parse(hoje) - Date.parse(c.data)) / 864e5) : 0;
+    var ehHoje = aberto && c.data === hoje;
+%>
+<li class="agenda-item <%= vencido ? 'vencido' : '' %> <%= aberto ? '' : 'encerrado' %>">
+    <div class="agenda-data">
+        <span class="dia"><%= fmtData(c.data).slice(0, 5) %></span>
+        <span class="sub"><%= ehHoje ? 'hoje' : diaDaSemana(c.data).slice(0, 3) %><%= c.hora ? ' · ' + c.hora : '' %></span>
+    </div>
+    <div class="agenda-corpo">
+        <a class="agenda-titulo" href="/agenda/<%= c.id %>"><%= c.titulo %></a>
+        <%
+            // Cada parte nao quebra por dentro; a quebra de linha so acontece depois de um separador.
+            var partes = [];
+            if (vencido) partes.push('<span class="atraso">vencido há ' + diasAtraso + ' dia' + (diasAtraso === 1 ? '' : 's') + '</span>');
+            if (!aberto) partes.push(escapar((c.status === 'concluido' ? 'concluído' : 'cancelado') + (c.concluido_por_nome ? ' por ' + c.concluido_por_nome : '')));
+            if (c.numero_processo && !(typeof ocultarProcesso !== 'undefined' && ocultarProcesso)) partes.push('<a class="mono" href="/processos/' + c.processo_id + '">' + fmtCnj(c.numero_processo) + '</a>');
+            if (c.caso_id && !(typeof ocultarCaso !== 'undefined' && ocultarCaso)) partes.push('<a href="/casos/' + c.caso_id + '">' + escapar(c.caso_titulo || 'caso') + '</a>');
+            if (c.local) partes.push({ livre: escapar(c.local) }); // texto livre (pode ser um link longo): quebra onde precisar
+            partes.push(escapar(c.responsavel_nome || 'sem responsável'));
+        %>
+        <span class="meta agenda-meta"><span class="badge neutro"><%= rotTipo %></span> <%- partes.map(function(p) { return p.livre ? '<span class="parte livre">' + p.livre + '</span>' : '<span class="parte">' + p + '</span>'; }).join('<span class="sep">&nbsp;· </span>') %></span>
+    </div>
+    <% if (aberto && pode('gerenciarAgenda')) { %>
+    <form method="post" action="/agenda/<%= c.id %>/concluir" class="agenda-acao">
+        <input type="hidden" name="voltar" value="<%= urlAtual %>">
+        <button type="submit" class="secondary" title="Marcar como concluído">Concluir</button>
+    </form>
+    <% } %>
+</li>

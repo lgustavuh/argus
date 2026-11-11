@@ -1,0 +1,37 @@
+<% var titulo = 'Configuração inicial' %>
+<%- include('partials/head') %>
+<main class="auth">
+    <section class="auth-arte" aria-hidden="true">
+        <img class="auth-imagem" src="/img/login-argus.webp" alt="" width="1200" height="675">
+        <div class="auth-legenda">
+            <p class="auth-lema">Nenhum prazo passa despercebido.</p>
+            <p class="auth-orgao">Procuradoria-Geral do Município de Itaú de Minas/MG</p>
+        </div>
+    </section>
+
+    <section class="auth-painel">
+        <div class="auth-form">
+            <img class="auth-logo-movel" src="/img/argus-logo.svg" alt="Logotipo do Argus" width="48" height="48">
+            <h1>Bem-vindo ao Argus</h1>
+            <p class="meta">Crie a conta de administrador para começar. Esta tela só aparece enquanto não houver nenhum usuário cadastrado.</p>
+
+            <form method="post" action="/setup">
+                <label for="nome">Nome</label>
+                <input type="text" id="nome" name="nome" autocomplete="name" required autofocus>
+                <label for="email">E-mail</label>
+                <input type="email" id="email" name="email" autocomplete="username" required>
+                <label for="senha">Senha</label>
+                <input type="password" id="senha" name="senha" autocomplete="new-password" minlength="10" required>
+                <label for="confirmarSenha">Confirmar senha</label>
+                <input type="password" id="confirmarSenha" name="confirmarSenha" autocomplete="new-password" minlength="10" required>
+                <p class="meta">Mínimo de 10 caracteres, com letras e números.</p>
+                <% if (erro) { %>
+                <p class="erro" role="alert"><%= erro %></p>
+                <% } %>
+                <button type="submit" class="auth-botao">Criar conta e entrar</button>
+            </form>
+        </div>
+    </section>
+</main>
+</body>
+</html>

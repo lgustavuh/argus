@@ -1,0 +1,91 @@
+<% var titulo = compromisso.titulo %>
+<%- include('partials/head') %>
+<% var ativo = 'agenda' %>
+<%- include('partials/sidebar') %>
+
+<%
+    var c = compromisso;
+    var aberto = c.status === 'aberto';
+    var vencido = aberto && c.data < hoje;
+    var ROTULO_STATUS = { aberto: vencido ? 'vencido' : 'em aberto', concluido: 'concluído', cancelado: 'cancelado' };
+%>
+
+<a href="/agenda" class="btn ghost">&larr; agenda</a>
+
+<div class="content-header">
+    <h1><%= c.titulo %></h1>
+    <span class="badge neutro <%= vencido ? 'vencido' : '' %>"><%= ROTULO_STATUS[c.status] %></span>
+</div>
+
+<% if (msg) { %><div class="msg-flash"><%= msg %></div><% } %>
+<% if (erros.length) { %>
+<div class="msg-flash aviso"><% erros.forEach(function(e) { %><div><%= e %></div><% }) %></div>
+<% } %>
+
+<div class="grid-2">
+    <div class="card">
+        <h2><%= TIPOS[c.tipo] || c.tipo %></h2>
+        <dl class="trilha">
+            <dt><%= c.tipo === 'prazo' ? 'Data fatal' : 'Data' %></dt>
+            <dd><%= fmtData(c.data) %> (<%= diaDaSemana(c.data) %>)<%= c.hora ? ' às ' + c.hora : '' %></dd>
+            <dt>Responsável</dt><dd><%= c.responsavel_nome || '—' %></dd>
+            <dt>Processo</dt>
+            <dd><% if (c.processo_id) { %><a class="mono" href="/processos/<%= c.processo_id %>"><%= fmtCnj(c.numero_processo) %></a><%= c.classe_nome ? ' · ' + c.classe_nome : '' %><% } else { %>—<% } %></dd>
+            <% if (c.caso_id) { %><dt>Caso</dt><dd><a href="/casos/<%= c.caso_id %>"><%= c.caso_titulo %></a></dd><% } %>
+            <% if (c.local) { %><dt>Local</dt><dd><%= c.local %></dd><% } %>
+            <% if (c.alerta_id) { %><dt>Origem</dt><dd><a href="/alertas/<%= c.alerta_id %>">alerta de movimentação</a></dd><% } %>
+            <dt>Lançado</dt><dd><%= c.criado_por_nome ? 'por ' + c.criado_por_nome + ', ' : '' %><%= fmtDataHora(c.criado_em) %></dd>
+            <% if (!aberto) { %>
+            <dt><%= c.status === 'concluido' ? 'Concluído' : 'Cancelado' %></dt>
+            <dd><%= c.concluido_por_nome ? 'por ' + c.concluido_por_nome + ', ' : '' %><%= fmtDataHora(c.concluido_em) %></dd>
+            <% } %>
+        </dl>
+        <% if (c.descricao) { %><p class="texto-livre"><%= c.descricao %></p><% } %>
+
+        <% if (pode('gerenciarAgenda')) { %>
+        <div class="filtros acoes">
+            <% if (aberto) { %>
+            <form method="post" action="/agenda/<%= c.id %>/concluir" class="inline">
+                <button type="submit">Marcar como concluído</button>
+            </form>
+            <form method="post" action="/agenda/<%= c.id %>/cancelar" class="inline" data-confirmar="Cancelar este compromisso? Ele sai da agenda, mas continua no histórico.">
+                <button type="submit" class="secondary">Cancelar compromisso</button>
+            </form>
+            <% } else { %>
+            <form method="post" action="/agenda/<%= c.id %>/reabrir" class="inline">
+                <button type="submit" class="secondary">Reabrir</button>
+            </form>
+            <% } %>
+        </div>
+        <% } %>
+    </div>
+
+    <div class="card">
+        <h2>Histórico</h2>
+        <ul class="timeline">
+            <% historico.forEach(function(h) { %>
+            <li>
+                <strong><%= ROTULOS_ACAO[h.acao] || h.acao %></strong>
+                <span class="meta"> — <%= h.usuario_nome || 'sistema' %>, <%= fmtDataHora(h.criado_em) %></span>
+                <% if (h.detalhes && h.detalhes.dataAnterior) { %><div class="meta">data alterada de <%= fmtData(h.detalhes.dataAnterior) %> para <%= fmtData(h.detalhes.data) %></div><% } %>
+            </li>
+            <% }) %>
+            <% if (!historico.length) { %><li class="meta">Sem registros.</li><% } %>
+        </ul>
+    </div>
+</div>
+
+<% if (pode('gerenciarAgenda')) { %>
+<div class="card">
+    <details <%= c.editando ? 'open' : '' %>>
+        <summary><h2 class="summary-titulo">Editar compromisso</h2></summary>
+        <form method="post" action="/agenda/<%= c.id %>" class="form-vertical">
+            <%- include('partials/compromisso_campos') %>
+            <div class="form-acoes"><button type="submit">Salvar alterações</button></div>
+        </form>
+    </details>
+</div>
+<script src="/js/prazos.js"></script>
+<% } %>
+
+<%- include('partials/foot') %>

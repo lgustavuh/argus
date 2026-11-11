@@ -1,0 +1,67 @@
+<% var titulo = 'Agenda' %>
+<%- include('partials/head') %>
+<% var ativo = 'agenda' %>
+<%- include('partials/sidebar') %>
+
+<div class="content-header">
+    <h1>Agenda</h1>
+    <% if (pode('gerenciarAgenda')) { %>
+    <div class="filtros acoes-topo">
+        <a class="btn" href="/agenda/novo">Novo prazo</a>
+        <a class="btn secondary" href="/agenda/novo?tipo=audiencia">Nova audiência</a>
+        <a class="btn secondary" href="/agenda/novo?tipo=tarefa">Nova tarefa</a>
+    </div>
+    <% } %>
+</div>
+
+<% if (msg) { %><div class="msg-flash"><%= msg %></div><% } %>
+
+<div class="card">
+    <div class="filtros abas-filtro">
+        <% [['aberto','Em aberto'],['concluido','Concluídos'],['cancelado','Cancelados'],['todos','Todos']].forEach(function(f) { %>
+        <a class="btn secondary <%= filtro.status === f[0] ? 'selecionado' : '' %>" href="/agenda?status=<%= f[0] %><%= filtro.responsavel ? '&responsavel=' + encodeURIComponent(filtro.responsavel) : '' %>"><%= f[1] %></a>
+        <% }) %>
+    </div>
+    <form class="filtros" method="get" action="/agenda">
+        <input type="hidden" name="status" value="<%= filtro.status %>">
+        <input type="search" name="busca" value="<%= filtro.busca || '' %>" placeholder="título, descrição ou número do processo" class="campo-busca" aria-label="Buscar">
+        <select name="responsavel" data-auto-submit aria-label="Responsável">
+            <option value="">Todos os responsáveis</option>
+            <option value="meus" <%= filtro.responsavel === 'meus' ? 'selected' : '' %>>Somente os meus</option>
+            <option value="sem" <%= filtro.responsavel === 'sem' ? 'selected' : '' %>>Sem responsável</option>
+            <% responsaveis.forEach(function(u) { %>
+            <option value="<%= u.id %>" <%= filtro.responsavel === String(u.id) ? 'selected' : '' %>><%= u.nome %></option>
+            <% }) %>
+        </select>
+        <select name="tipo" data-auto-submit aria-label="Tipo">
+            <option value="">Todos os tipos</option>
+            <% Object.keys(TIPOS).forEach(function(t) { %>
+            <option value="<%= t %>" <%= filtro.tipo === t ? 'selected' : '' %>><%= TIPOS[t] %></option>
+            <% }) %>
+        </select>
+        <button type="submit" class="secondary">Filtrar</button>
+    </form>
+
+    <% if (grupos) { %>
+        <% if (!grupos.length) { %>
+        <p class="meta">Nenhum compromisso em aberto<%= filtro.responsavel || filtro.tipo || filtro.busca ? ' com estes filtros' : '' %>.
+        <% if (pode('gerenciarAgenda') && !filtro.busca) { %>Lance prazos a partir de um alerta ("Registrar prazo") ou pelo botão "Novo prazo".<% } %></p>
+        <% } %>
+        <% grupos.forEach(function(g) { %>
+        <section class="agenda-grupo <%= g.chave %>">
+            <h3><%= g.titulo %> <span class="meta">(<%= g.itens.length %>)</span></h3>
+            <ul class="agenda-lista">
+                <% g.itens.forEach(function(c) { %><%- include('partials/compromisso_linha', { c: c }) %><% }) %>
+            </ul>
+        </section>
+        <% }) %>
+    <% } else { %>
+        <ul class="agenda-lista">
+            <% compromissos.forEach(function(c) { %><%- include('partials/compromisso_linha', { c: c }) %><% }) %>
+        </ul>
+        <% if (!compromissos.length) { %><p class="meta">Nenhum compromisso encontrado.</p><% } %>
+        <%- include('partials/paginacao') %>
+    <% } %>
+</div>
+
+<%- include('partials/foot') %>

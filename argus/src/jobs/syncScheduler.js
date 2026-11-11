@@ -1,0 +1,55 @@
+const cron = require('node-cron');
+const { sincronizar, syncEmAndamento } = require('../services/reconciliation');
+const { escalarAlertasVencidos } = require('../services/alertEngine');
+const { enviarResumosDiarios } = require('../services/agenda');
+const configuracoes = require('../services/configuracoes');
+
+/**
+ * Um unico relogio, de hora em hora:
+ * - escalonamento de alertas vencidos (sempre ativo — so reage a alertas ja existentes);
+ * - resumo diario da agenda por e-mail (uma vez por dia util, a partir das 7h);
+ * - sync com a fonte de dados, se estiver ativado em Configuracoes > Integracao e o intervalo
+ *   configurado ja tiver passado desde o ultimo. Como o intervalo e lido a cada hora, mudar a
+ *   configuracao na tela vale sem reiniciar o container.
+ */
+async function talvezSincronizar() {
+    if (syncEmAndamento()) return;
+    const [ativo, intervaloHoras, ultimoEm] = await Promise.all([
+        configuracoes.lerBooleano('sync.ativo'),
+        configuracoes.lerNumero('sync.intervalo_horas'),
+        configuracoes.ler('sync.ultimo_em')
+    ]);
+    if (!ativo) return;
+    const ultimo = ultimoEm ? new Date(ultimoEm).getTime() : 0;
+    // Folga de 5 minutos para o tick de hora em hora nao "perder" a vez por segundos.
+    if (Date.now() - ultimo < intervaloHoras * 60 * 60 * 1000 - 5 * 60 * 1000) return;
+
+    console.log('[scheduler] Iniciando sincronizacao agendada...');
+    const resumo = await sincronizar({ origem: 'agendado' });
+    console.log('[scheduler] Sincronizacao concluida:', JSON.stringify(resumo));
+}
+
+function iniciarScheduler() {
+    cron.schedule('0 0 * * * *', async () => {
+        try {
+            const total = await escalarAlertasVencidos();
+            if (total > 0) console.log(`[scheduler] ${total} alerta(s) escalado(s).`);
+        } catch (err) {
+            console.error('[scheduler] Falha ao escalar alertas:', err);
+        }
+        try {
+            const enviados = await enviarResumosDiarios();
+            if (enviados > 0) console.log(`[scheduler] Resumo da agenda enviado a ${enviados} pessoa(s).`);
+        } catch (err) {
+            console.error('[scheduler] Falha ao enviar o resumo da agenda:', err.message);
+        }
+        try {
+            await talvezSincronizar();
+        } catch (err) {
+            console.error('[scheduler] Falha na sincronizacao agendada:', err.message);
+        }
+    });
+    console.log('[scheduler] Relogio de hora em hora iniciado (escalonamento + resumo da agenda + sync conforme Configuracoes > Integracao).');
+}
+
+module.exports = { iniciarScheduler };

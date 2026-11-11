@@ -1,0 +1,18 @@
+<%
+    // Barras horizontais de uma serie (magnitude, um tom so). Espera: itens [{rotulo, total}], unidade ('processo').
+    // O valor fica escrito ao lado de cada barra (a cor nunca e a unica forma de ler o numero).
+    var max = itens.reduce(function(m, i) { return Math.max(m, i.total); }, 0) || 1;
+%>
+<% if (!itens.length) { %>
+<p class="meta">Sem dados.</p>
+<% } else { %>
+<ul class="barras">
+    <% itens.forEach(function(i) { var pct = Math.max(1, Math.round((i.total / max) * 100)); %>
+    <li title="<%= i.rotulo %>: <%= i.total %> <%= unidade %><%= i.total === 1 ? '' : 's' %>">
+        <span class="barra-rotulo"><%= i.rotulo %></span>
+        <span class="barra-trilho"><span class="barra" style="width: <%= pct %>%"></span></span>
+        <span class="barra-valor"><%= i.total %></span>
+    </li>
+    <% }) %>
+</ul>
+<% } %>

@@ -1,0 +1,181 @@
+<% var titulo = fmtCnj(processo.numero_processo) %>
+<%- include('partials/head') %>
+<% var ativo = 'processos' %>
+<%- include('partials/sidebar') %>
+
+<% var ROTULO_SITUACAO = { aguardando: 'aguardando consulta', localizado: 'localizado', nao_localizado: 'não localizado na fonte' }; %>
+<% var ROTULO_ORIGEM = { manual: 'cadastro manual', importacao: 'importação em lote', mni_aviso: 'aviso do MNI' }; %>
+
+<a href="/processos" class="btn ghost">&larr; voltar</a>
+
+<div class="content-header">
+    <h1 class="mono"><%= fmtCnj(processo.numero_processo) %></h1>
+    <span class="badge neutro <%= processo.situacao_fonte %>"><%= processo.ativo ? (ROTULO_SITUACAO[processo.situacao_fonte] || processo.situacao_fonte) : 'arquivado' %></span>
+    <%- include('partials/etiquetas', { lista: processo.etiquetas, base: '/processos' }) %>
+</div>
+
+<% if (msg) { %><div class="msg-flash"><%= msg %></div><% } %>
+
+<% if (processo.situacao_fonte === 'nao_localizado') { %>
+<div class="msg-flash aviso">Este número não foi encontrado na fonte de dados na última consulta. Pode ser processo em
+segredo de justiça, ainda não indexado pelo tribunal ou número digitado errado.</div>
+<% } %>
+
+<div class="grid-2">
+    <div class="card">
+        <h2>Dados do processo</h2>
+        <dl class="trilha">
+            <dt>Tribunal</dt><dd><%= processo.tribunal.toUpperCase() %><%= processo.graus ? ' · ' + processo.graus : '' %></dd>
+            <dt>Classe</dt><dd><%= processo.classe_nome || '—' %></dd>
+            <dt>Órgão julgador</dt><dd><%= processo.orgao_julgador || '—' %></dd>
+            <% var sist = sistemaDoProcesso(processo); %>
+            <dt>Sistema</dt><dd><%= sist ? sist.rotulo + (sist.informado ? ' (informado pela Procuradoria)' : '') : 'não informado pelo DataJud' %></dd>
+            <dt>Ajuizamento</dt><dd><%= fmtData(processo.data_ajuizamento) %></dd>
+            <dt>Cadastro</dt><dd><%= ROTULO_ORIGEM[processo.origem] || processo.origem %><%= processo.criado_por_nome ? ' por ' + processo.criado_por_nome : '' %>, <%= fmtDataHora(processo.criado_em) %></dd>
+            <dt>Última consulta</dt><dd><%= fmtDataHora(processo.ultima_consulta_em) %></dd>
+        </dl>
+        <% if (processo.link_consulta_publica) { %>
+        <p><a class="btn secondary" href="<%= processo.link_consulta_publica %>" target="_blank" rel="noopener">Consultar no <%= sist ? sist.rotulo : 'sistema de origem' %></a></p>
+        <% } else if (linksAlternativos(processo).length) { %>
+        <p class="meta">O DataJud não informa em qual sistema este processo tramita (comum em autos físicos e em processos convertidos recentemente). Consulte nos dois:</p>
+        <div class="filtros">
+            <% linksAlternativos(processo).forEach(function(l) { %>
+            <a class="btn secondary" href="<%= l.url %>" target="_blank" rel="noopener">Consultar no <%= l.rotulo %></a>
+            <% }) %>
+        </div>
+        <% } %>
+        <% if (pode('gerenciarProcessos') && processo.tribunal === 'tjmg') { %>
+        <form method="post" action="/processos/<%= processo.id %>/sistema" class="filtros form-sistema">
+            <label for="sistema">Sistema de tramitação</label>
+            <select name="sistema" id="sistema">
+                <option value="" <%= !processo.sistema_informado ? 'selected' : '' %>>Usar o do DataJud<%= processo.sistema ? ' (' + processo.sistema + ')' : '' %></option>
+                <option value="pje" <%= processo.sistema_informado === 'pje' ? 'selected' : '' %>>PJe</option>
+                <option value="eproc" <%= processo.sistema_informado === 'eproc' ? 'selected' : '' %>>eproc</option>
+            </select>
+            <button type="submit" class="secondary">Salvar</button>
+        </form>
+        <% } %>
+    </div>
+
+    <div class="card">
+        <h2>Acompanhamento</h2>
+        <% if (pode('gerenciarProcessos')) { %>
+        <form method="post" action="/processos/<%= processo.id %>/responsavel">
+            <label for="responsavelId">Responsável</label>
+            <div class="filtros">
+                <select name="responsavelId" id="responsavelId">
+                    <option value="">Sem responsável</option>
+                    <% responsaveis.forEach(function(p) { %>
+                    <option value="<%= p.id %>" <%= processo.procurador_responsavel_id === p.id ? 'selected' : '' %>><%= p.nome %></option>
+                    <% }) %>
+                </select>
+                <button type="submit" class="secondary">Salvar</button>
+            </div>
+        </form>
+        <form method="post" action="/processos/<%= processo.id %>/observacao">
+            <label for="observacao">Observação</label>
+            <div class="filtros">
+                <input type="text" id="observacao" name="observacao" value="<%= processo.observacao || '' %>" class="campo-largo">
+                <button type="submit" class="secondary">Salvar</button>
+            </div>
+        </form>
+        <form method="post" action="/processos/<%= processo.id %>/etiquetas">
+            <label for="etiquetas">Etiquetas <span class="meta">(separadas por vírgula)</span></label>
+            <div class="filtros">
+                <%- include('partials/etiquetas_campo', { valor: (processo.etiquetas || []).join(', ') }) %>
+                <button type="submit" class="secondary">Salvar</button>
+            </div>
+        </form>
+        <form method="post" action="/processos/<%= processo.id %>/ativo"
+              data-confirmar="<%= processo.ativo ? 'Arquivar este processo? Ele deixa de ser consultado e não gera novos alertas.' : 'Reativar o monitoramento deste processo?' %>">
+            <input type="hidden" name="ativo" value="<%= processo.ativo ? 'false' : 'true' %>">
+            <button type="submit" class="secondary"><%= processo.ativo ? 'Arquivar processo' : 'Reativar monitoramento' %></button>
+        </form>
+        <% } else { %>
+        <dl class="trilha">
+            <dt>Responsável</dt><dd><%= processo.procurador_nome || '—' %></dd>
+            <dt>Observação</dt><dd><%= processo.observacao || '—' %></dd>
+        </dl>
+        <% } %>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title-row">
+        <h2>Prazos e compromissos</h2>
+        <% if (pode('gerenciarAgenda')) { %><a class="btn secondary" href="/agenda/novo?processoId=<%= processo.id %>">Novo compromisso</a><% } %>
+    </div>
+    <% if (compromissos.length) { %>
+    <ul class="agenda-lista">
+        <% compromissos.forEach(function(c) { %><%- include('partials/compromisso_linha', { c: c, ocultarProcesso: true }) %><% }) %>
+    </ul>
+    <% } else { %>
+    <p class="meta">Nenhum prazo, audiência ou tarefa lançado para este processo.</p>
+    <% } %>
+</div>
+
+<% if (casos.length) { %>
+<div class="card">
+    <h2>Casos vinculados</h2>
+    <ul class="lista-casos">
+        <% casos.forEach(function(k) { %>
+        <li><a href="/casos/<%= k.id %>"><%= k.titulo %></a> <span class="meta">· <%= k.status === 'aberto' ? 'em andamento' : 'encerrado' %><%= k.referencia ? ' · ' + k.referencia : '' %></span></li>
+        <% }) %>
+    </ul>
+</div>
+<% } %>
+
+<%- include('partials/documentos_card', { dono: { campo: 'processoId', id: processo.id } }) %>
+
+<%- include('partials/anotacoes', { acao: '/processos/' + processo.id + '/anotacoes' }) %>
+
+<% if (alertas.length) { %>
+<div class="card">
+    <h2>Alertas deste processo</h2>
+    <table>
+        <thead><tr><th>Movimentação</th><th>Status</th><th>Criado em</th><th>Ciência</th><th></th></tr></thead>
+        <tbody>
+            <% alertas.forEach(function(a) { %>
+            <tr>
+                <td><%= a.movimento_nome || '—' %></td>
+                <td><span class="badge <%= a.status %>"><%= a.status %></span></td>
+                <td class="meta"><%= fmtDataHora(a.criado_em) %></td>
+                <td class="meta"><%= a.ciente_em ? fmtDataHora(a.ciente_em) + (a.ciente_por_nome ? ' — ' + a.ciente_por_nome : '') : '—' %></td>
+                <td><a class="btn secondary" href="/alertas/<%= a.id %>">Ver</a></td>
+            </tr>
+            <% }) %>
+        </tbody>
+    </table>
+</div>
+<% } %>
+
+<div class="card">
+    <h2>Linha do tempo de movimentos</h2>
+    <ul class="timeline">
+        <%
+            // Conversao de autos fisicos em eletronicos (TPU 14732): marca onde termina o historico do
+            // processo fisico. O dia da conversao inteiro (ex.: a redistribuicao no PJe) fica acima do aviso.
+            var conversao = movimentos.find(function(x) { return x.codigo_tpu === 14732 && x.data_hora; });
+            var limiteFisico = conversao ? new Date(conversao.data_hora).getTime() - 24 * 60 * 60 * 1000 : null;
+            var marcoExibido = false;
+        %>
+        <% movimentos.forEach(function(m) { %>
+        <% if (limiteFisico && !marcoExibido && m.data_hora && new Date(m.data_hora).getTime() < limiteFisico) { marcoExibido = true; %>
+        <li class="marco">
+            Autos físicos convertidos em eletrônicos em <%= fmtData(conversao.data_hora) %>. As movimentações abaixo são do
+            processo físico — o PJe mostra apenas o que ocorreu a partir da conversão.
+        </li>
+        <% } %>
+        <li class="<%= m.relevante_para_prazo ? 'relevante' : '' %>">
+            <strong><%= m.nome || 'Movimento sem descrição' %></strong>
+            <span class="meta"> — <%= m.data_hora ? fmtDataHora(m.data_hora) : 'data não informada' %> · TPU <span class="mono"><%= m.codigo_tpu || '—' %></span></span>
+            <% if (m.relevante_para_prazo) { %><span class="badge pendente">potencial prazo</span><% } %>
+        </li>
+        <% }) %>
+        <% if (!movimentos.length) { %>
+        <li class="meta"><%= processo.situacao_fonte === 'aguardando' ? 'Aguardando a primeira consulta à fonte de dados.' : 'Nenhum movimento registrado.' %></li>
+        <% } %>
+    </ul>
+</div>
+
+<%- include('partials/foot') %>

@@ -1,0 +1,80 @@
+<%
+    // Campos do formulario de compromisso (novo e edicao). Espera: compromisso, responsaveis, TIPOS.
+    var cp = compromisso;
+    var numeroCampo = cp.numeroProcesso !== undefined ? cp.numeroProcesso : (cp.numero_processo ? fmtCnj(cp.numero_processo) : '');
+    var respSel = cp.responsavelId !== undefined ? cp.responsavelId : cp.responsavel_id;
+%>
+<% if (cp.alertaId) { %><input type="hidden" name="alertaId" value="<%= cp.alertaId %>"><% } %>
+<% var casoSel = cp.casoId !== undefined ? cp.casoId : cp.caso_id; %>
+<% if (casoSel) { %>
+<input type="hidden" name="casoId" value="<%= casoSel %>">
+<p class="meta">Caso: <a href="/casos/<%= casoSel %>"><%= cp.caso_titulo || 'caso #' + casoSel %></a></p>
+<% } %>
+
+<label for="tipo">Tipo</label>
+<select name="tipo" id="tipo">
+    <% Object.keys(TIPOS).forEach(function(t) { %>
+    <option value="<%= t %>" <%= cp.tipo === t ? 'selected' : '' %>><%= TIPOS[t] %></option>
+    <% }) %>
+</select>
+
+<label for="titulo">Título</label>
+<input type="text" id="titulo" name="titulo" value="<%= cp.titulo || '' %>" maxlength="200" required placeholder="ex.: Contestação, Audiência de conciliação, Juntar procuração">
+
+<div class="campos-linha">
+    <div>
+        <label for="data">Data <span class="meta">(para prazo, a data fatal)</span></label>
+        <input type="date" id="data" name="data" value="<%= cp.data || '' %>" required>
+    </div>
+    <div>
+        <label for="hora">Hora <span class="meta">(opcional)</span></label>
+        <input type="time" id="hora" name="hora" value="<%= cp.hora || '' %>">
+    </div>
+</div>
+
+<details class="calculadora" data-calculadora>
+    <summary>Calcular a data fatal de um prazo processual</summary>
+    <div class="calculadora-corpo">
+        <div class="campos-linha">
+            <div>
+                <label for="calcInicio">Intimação / ciência em</label>
+                <input type="date" id="calcInicio" data-calc-inicio>
+            </div>
+            <div>
+                <label for="calcDias">Prazo (dias)</label>
+                <input type="number" id="calcDias" min="1" max="365" data-calc-dias placeholder="15">
+            </div>
+            <div>
+                <label for="calcContagem">Contagem</label>
+                <select id="calcContagem" data-calc-contagem>
+                    <option value="uteis">dias úteis (CPC, art. 219)</option>
+                    <option value="corridos">dias corridos</option>
+                </select>
+            </div>
+        </div>
+        <label class="checkbox"><input type="checkbox" data-calc-dobro checked> Prazo em dobro da Fazenda Pública (CPC, art. 183)</label>
+        <p class="meta" data-calc-resultado aria-live="polite"></p>
+        <button type="button" class="secondary" data-calc-aplicar disabled>Usar esta data</button>
+        <p class="meta">A contagem exclui o dia da intimação e pula fins de semana, feriados nacionais, Carnaval,
+        Sexta-feira Santa, Corpus Christi, Dia da Justiça (8/12) e o recesso de 20/12 a 20/01. Feriados municipais e
+        suspensões de expediente do TJMG não entram: confira antes de salvar.</p>
+    </div>
+</details>
+
+<label for="numeroProcesso">Processo <span class="meta">(opcional — número CNJ de um processo cadastrado no Argus)</span></label>
+<input type="text" id="numeroProcesso" name="numeroProcesso" value="<%= numeroCampo %>" class="mono" placeholder="0000000-00.0000.0.00.0000" autocomplete="off">
+
+<label for="responsavelId">Responsável</label>
+<select name="responsavelId" id="responsavelId">
+    <option value="">Sem responsável</option>
+    <% responsaveis.forEach(function(u) { %>
+    <option value="<%= u.id %>" <%= String(respSel) === String(u.id) ? 'selected' : '' %>><%= u.nome %></option>
+    <% }) %>
+</select>
+<p class="meta">O responsável recebe um e-mail quando o compromisso é atribuído a ele por outra pessoa.</p>
+
+<label for="local">Local <span class="meta">(opcional — sala, fórum ou link da audiência)</span></label>
+<input type="text" id="local" name="local" value="<%= cp.local || '' %>" maxlength="200">
+
+<label for="descricao">Descrição <span class="meta">(opcional)</span></label>
+<textarea id="descricao" name="descricao" rows="4"><%= cp.descricao || '' %></textarea>

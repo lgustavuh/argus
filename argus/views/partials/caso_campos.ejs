@@ -1,0 +1,39 @@
+<%
+    // Campos do formulario de caso (novo e edicao). Espera: caso, responsaveis, TIPOS, etiquetasExistentes.
+    var k = caso;
+    var numeroCampo = k.numeroProcesso !== undefined ? k.numeroProcesso : (k.numero_processo ? fmtCnj(k.numero_processo) : '');
+    var respSel = k.responsavelId !== undefined ? k.responsavelId : k.responsavel_id;
+    var etiq = typeof k.etiquetas === 'string' ? k.etiquetas : (k.etiquetas || []).join(', ');
+%>
+<label for="titulo">Título</label>
+<input type="text" id="titulo" name="titulo" value="<%= k.titulo || '' %>" maxlength="200" required placeholder="ex.: Sindicância — contrato de transporte escolar">
+
+<label for="tipo">Tipo</label>
+<select name="tipo" id="tipo">
+    <% Object.keys(TIPOS).forEach(function(t) { %>
+    <option value="<%= t %>" <%= k.tipo === t ? 'selected' : '' %>><%= TIPOS[t] %></option>
+    <% }) %>
+</select>
+
+<label for="referencia">Referência <span class="meta">(opcional — nº do procedimento, protocolo, SEI)</span></label>
+<input type="text" id="referencia" name="referencia" value="<%= k.referencia || '' %>" maxlength="100">
+
+<label for="interessado">Interessado / parte <span class="meta">(opcional)</span></label>
+<input type="text" id="interessado" name="interessado" value="<%= k.interessado || '' %>" maxlength="200" placeholder="ex.: Secretaria de Saúde, fornecedor, munícipe">
+
+<label for="responsavelId">Responsável</label>
+<select name="responsavelId" id="responsavelId">
+    <option value="">Sem responsável</option>
+    <% responsaveis.forEach(function(u) { %>
+    <option value="<%= u.id %>" <%= String(respSel) === String(u.id) ? 'selected' : '' %>><%= u.nome %></option>
+    <% }) %>
+</select>
+
+<label for="etiquetas">Etiquetas <span class="meta">(separadas por vírgula)</span></label>
+<%- include('etiquetas_campo', { valor: etiq }) %>
+
+<label for="numeroProcesso">Processo judicial vinculado <span class="meta">(opcional — quando o caso virar ação, informe o número)</span></label>
+<input type="text" id="numeroProcesso" name="numeroProcesso" value="<%= numeroCampo %>" class="mono" placeholder="0000000-00.0000.0.00.0000" autocomplete="off">
+
+<label for="descricao">Descrição <span class="meta">(opcional)</span></label>
+<textarea id="descricao" name="descricao" rows="5"><%= k.descricao || '' %></textarea>
