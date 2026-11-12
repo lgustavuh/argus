@@ -6,7 +6,8 @@ const SELECT_DETALHADO = `
            u.nome AS procurador_nome,
            m.nome AS movimento_nome, m.codigo_tpu, m.data_hora AS movimento_data_hora,
            COALESCE(c.peso_urgencia, 1) AS peso_urgencia,
-           uv.nome AS visualizado_por_nome, uc.nome AS ciente_por_nome, ue.nome AS escalado_para_nome
+           uv.nome AS visualizado_por_nome, uc.nome AS ciente_por_nome, ue.nome AS escalado_para_nome,
+           (SELECT COUNT(*)::int FROM movimentos mm WHERE mm.alerta_id = a.id) AS qtd_movimentos
     FROM alertas a
     JOIN processos p ON p.id = a.processo_id
     LEFT JOIN usuarios u ON u.id = p.procurador_responsavel_id
@@ -25,10 +26,20 @@ async function create({ processoId, movimentoId, tipo = 'movimento_relevante', p
     return rows[0];
 }
 
+// Dia (America/Sao_Paulo) de uma coluna TIMESTAMP que guarda UTC.
+const DIA_SP = (coluna) => `((${coluna} AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo')::date`;
+
 /**
- * Cria o alerta de um movimento pendente e remove a marca `alerta_pendente` na MESMA transacao.
- * O UPDATE trava a linha do movimento: duas execucoes simultaneas nao criam alerta duplicado — a
- * segunda encontra a marca ja removida e devolve null.
+ * Trata um movimento pendente: remove a marca `alerta_pendente` e, na MESMA transacao, ou o junta a
+ * um alerta ainda sem ciencia do mesmo processo e do mesmo dia (PRD MEL-17: uma publicacao gera
+ * disponibilizacao + expedicao + publicacao no mesmo dia), ou cria um alerta novo.
+ *
+ * - O UPDATE da marca trava o movimento: duas execucoes simultaneas nao tratam o mesmo movimento.
+ * - O advisory lock por processo evita que dois movimentos do mesmo dia, tratados em paralelo,
+ *   abram dois alertas.
+ * - Nunca junta a um alerta com ciencia: um movimento novo depois da ciencia seria escondido.
+ *
+ * @returns {Promise<{alerta: object, novo: boolean}|null>} null se o movimento ja tinha sido tratado
  */
 async function criarParaMovimentoPendente({ movimentoId, prazoDiasAlerta, tipo = 'movimento_relevante' }) {
     const client = await pool.connect();
@@ -37,26 +48,59 @@ async function criarParaMovimentoPendente({ movimentoId, prazoDiasAlerta, tipo =
         const { rows: reivindicado } = await client.query(
             `UPDATE movimentos SET alerta_pendente = FALSE
              WHERE id = $1 AND alerta_pendente
-             RETURNING processo_id`,
+             RETURNING processo_id, data_hora`,
             [movimentoId]
         );
         if (!reivindicado.length) {
             await client.query('ROLLBACK');
             return null;
         }
-        const { rows } = await client.query(
-            `INSERT INTO alertas (processo_id, movimento_id, tipo, prazo_dias_alerta)
-             VALUES ($1,$2,$3,$4) RETURNING *`,
-            [reivindicado[0].processo_id, movimentoId, tipo, prazoDiasAlerta]
-        );
+        const { processo_id: processoId, data_hora: dataHora } = reivindicado[0];
+        await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`argus:alerta:processo:${processoId}`]);
+
+        let alerta = null;
+        if (dataHora) {
+            const { rows } = await client.query(
+                `SELECT a.* FROM alertas a
+                 JOIN movimentos m ON m.id = a.movimento_id
+                 WHERE a.processo_id = $1 AND a.tipo = $2
+                   AND a.status IN ('pendente', 'visualizado', 'escalado')
+                   AND ${DIA_SP('m.data_hora')} = ${DIA_SP('$3::timestamp')}
+                 ORDER BY a.id LIMIT 1`,
+                [processoId, tipo, dataHora]
+            );
+            alerta = rows[0] || null;
+        }
+        const novo = !alerta;
+        if (novo) {
+            const { rows } = await client.query(
+                `INSERT INTO alertas (processo_id, movimento_id, tipo, prazo_dias_alerta)
+                 VALUES ($1,$2,$3,$4) RETURNING *`,
+                [processoId, movimentoId, tipo, prazoDiasAlerta]
+            );
+            alerta = rows[0];
+        }
+        await client.query('UPDATE movimentos SET alerta_id = $1 WHERE id = $2', [alerta.id, movimentoId]);
         await client.query('COMMIT');
-        return rows[0];
+        return { alerta, novo };
     } catch (err) {
         await client.query('ROLLBACK').catch(() => {});
         throw err;
     } finally {
         client.release();
     }
+}
+
+/** Movimentos reunidos num alerta (o que abriu o alerta incluido), em ordem cronologica. */
+async function listMovimentos(alertaId) {
+    const { rows } = await pool.query(
+        `SELECT m.id, m.codigo_tpu, m.nome, m.data_hora
+         FROM movimentos m
+         WHERE m.alerta_id = $1 OR m.id = (SELECT movimento_id FROM alertas WHERE id = $1)
+         ORDER BY m.data_hora NULLS LAST, m.id`,
+        [alertaId]
+    );
+    return rows;
 }
 
 async function findById(id) {
@@ -166,6 +210,7 @@ async function listRecentes({ limit = 6 } = {}) {
 module.exports = {
     create,
     criarParaMovimentoPendente,
+    listMovimentos,
     findById,
     list,
     marcarVisualizado,

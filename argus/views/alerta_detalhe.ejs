@@ -17,8 +17,17 @@
 </div>
 
 <div class="card">
+    <% if (movimentos.length > 1) { %>
+    <p><strong>Movimentações deste alerta</strong> <span class="meta">(mesmo processo, mesmo dia — reunidas em um alerta só)</span></p>
+    <ul class="movimentos-alerta">
+        <% movimentos.forEach(function(m) { %>
+        <li><span class="meta"><%= fmtDataHora(m.data_hora) %></span> — <%= m.nome || '—' %> <span class="meta">(TPU <span class="mono"><%= m.codigo_tpu || '—' %></span>)</span></li>
+        <% }) %>
+    </ul>
+    <% } else { %>
     <p><strong>Movimentação:</strong> <%= alerta.movimento_nome || '—' %> <span class="meta">(código TPU: <span class="mono"><%= alerta.codigo_tpu || '—' %></span>)</span></p>
     <p><strong>Data da movimentação:</strong> <%= fmtDataHora(alerta.movimento_data_hora) %></p>
+    <% } %>
     <% var sist = sistemaDoProcesso(alerta); %>
     <p><strong>Sistema:</strong> <%= sist ? sist.rotulo + (sist.informado ? ' (informado pela Procuradoria)' : '') : 'não identificado' %></p>
     <p><strong>Responsável pelo processo:</strong> <%= alerta.procurador_nome || 'não definido' %></p>

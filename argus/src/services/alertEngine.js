@@ -59,14 +59,17 @@ async function notificarNovoAlerta({ alerta, processo, movimento }) {
  * A criacao e a remocao da marca acontecem na mesma transacao; se algo falhar antes do COMMIT,
  * o movimento continua pendente e sera reprocessado por `gerarAlertasPendentes`.
  *
- * @returns {Promise<object|null>} o alerta, ou null se o movimento ja tinha sido tratado
+ * Movimento do mesmo dia de um alerta ainda aberto entra nesse alerta (PRD MEL-17) e nao gera
+ * novo e-mail: a equipe ja foi avisada daquele alerta e o ve no sistema.
+ *
+ * @returns {Promise<{alerta: object, novo: boolean}|null>} null se o movimento ja tinha sido tratado
  */
 async function criarAlertaParaMovimento({ processo, movimento }) {
     const prazoDiasAlerta = await configuracoes.lerNumero('geral.dias_escalonamento');
-    const alerta = await alertasModel.criarParaMovimentoPendente({ movimentoId: movimento.id, prazoDiasAlerta });
-    if (!alerta) return null;
-    await notificarNovoAlerta({ alerta, processo, movimento });
-    return alerta;
+    const resultado = await alertasModel.criarParaMovimentoPendente({ movimentoId: movimento.id, prazoDiasAlerta });
+    if (!resultado) return null;
+    if (resultado.novo) await notificarNovoAlerta({ alerta: resultado.alerta, processo, movimento });
+    return resultado;
 }
 
 /**
@@ -85,8 +88,8 @@ async function gerarAlertasPendentes({ processoId = null, processo = null } = {}
             if (!processos.has(movimento.processo_id)) {
                 processos.set(movimento.processo_id, await processosModel.findById(movimento.processo_id));
             }
-            const alerta = await criarAlertaParaMovimento({ processo: processos.get(movimento.processo_id), movimento });
-            if (alerta) criados += 1;
+            const resultado = await criarAlertaParaMovimento({ processo: processos.get(movimento.processo_id), movimento });
+            if (resultado?.novo) criados += 1;
         } catch (err) {
             falhas += 1;
             console.error(`[alertas] Falha ao criar alerta do movimento ${movimento.id} (fica pendente):`, err.message);

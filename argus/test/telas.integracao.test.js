@@ -39,6 +39,7 @@ async function novoAlerta(sistema) {
         [p.id]
     );
     const { rows: [al] } = await pool.query('INSERT INTO alertas (processo_id, movimento_id) VALUES ($1, $2) RETURNING id', [p.id, m.id]);
+    await pool.query('UPDATE movimentos SET alerta_id = $1 WHERE id = $2', [al.id, m.id]);
     return { processoId: p.id, alertaId: al.id };
 }
 
@@ -105,6 +106,19 @@ describe('telas: botão "Abrir no PJe/eproc" (MEL-16, integração)', { skip: ba
         });
         assert.equal(resp.status, 302);
         assert.match(resp.headers.get('location'), new RegExp(`^/processos/${processoId}\\b`));
+    });
+
+    test('MEL-17: alerta com várias movimentações lista todas (detalhe e lista)', async () => {
+        const { processoId, alertaId } = await novoAlerta('PJe');
+        await pool.query(
+            `INSERT INTO movimentos (processo_id, codigo_tpu, nome, data_hora, relevante_para_prazo, hash_dedup, alerta_id)
+             VALUES ($1, 12265, 'Publicação no DJe', NOW(), TRUE, md5(random()::text) || md5(random()::text), $2)`,
+            [processoId, alertaId]
+        );
+        const html = await (await pedir(`/alertas/${alertaId}`, 'procurador')).text();
+        assert.match(html, /Movimentações deste alerta/);
+        assert.match(html, /Publicação no DJe/);
+        assert.match(await (await pedir('/alertas?status=abertos', 'procurador')).text(), /\+1<\/span>/);
     });
 
     test('lista de alertas e detalhe do processo também mostram o botão', async () => {

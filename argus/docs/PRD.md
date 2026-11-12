@@ -165,7 +165,7 @@ Encontrados na revisão de 11/11/2026. Severidade: 🔴 alta · 🟠 média · �
 - **MEL-15 Retenção/LGPD:** política de expurgo de auditoria e documentos de processos arquivados.
 - ✅ **MEL-16 Botão "Abrir no PJe/eproc"** (12/11/2026: alerta, lista, processo e e-mail; "Copiar número"; sistema informado direto no alerta; "Estou ciente (só no Argus)") em cada alerta e processo, levando ao sistema certo; quando o
   sistema é desconhecido, pedir que seja informado (uma vez por processo) em vez de mostrar dois links.
-- **MEL-17 Uma intimação, um alerta:** movimentos relevantes do mesmo processo em janela curta formam um
+- ✅ **MEL-17 Uma intimação, um alerta** (12/11/2026: mesmo processo + mesmo dia em Brasília + alerta ainda sem ciência = mesmo alerta; um e-mail por alerta; migration 011): movimentos relevantes do mesmo processo em janela curta formam um
   único alerta (em 12/11, uma única publicação gerou 3 alertas: disponibilização no DJe, expedição e publicação).
 - **MEL-18 Avisos pendentes do MNI** como alertas com a **data da ciência tácita** (10 dias corridos da
   disponibilização — Lei 11.419/2006, art. 5º, §3º) em destaque; sem abrir o teor.

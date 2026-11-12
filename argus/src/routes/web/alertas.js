@@ -39,11 +39,12 @@ router.get('/:id', a(async (req, res) => {
             alerta = await alertasModel.findById(alerta.id);
         }
     }
-    const [historico, compromissos] = await Promise.all([
+    const [historico, compromissos, movimentos] = await Promise.all([
         auditoria.listarPorEntidade('alerta', alerta.id),
-        compromissosModel.listPorAlerta(alerta.id)
+        compromissosModel.listPorAlerta(alerta.id),
+        alertasModel.listMovimentos(alerta.id)
     ]);
-    res.render('alerta_detalhe', { alerta, historico, compromissos, hoje: hojeSP(), msg: req.query.msg });
+    res.render('alerta_detalhe', { alerta, historico, compromissos, movimentos, hoje: hojeSP(), msg: req.query.msg });
 }));
 
 router.post('/:id/ciencia', requirePermissao('darCiencia'), a(async (req, res) => {

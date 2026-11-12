@@ -21,6 +21,11 @@ function diasAtras(dias) {
     return new Date(Date.now() - dias * 864e5).toISOString().slice(0, 19) + '.000Z';
 }
 
+// Horario local de Brasilia em um dia N dias atras, no formato do DataJud.
+function diaAtrasAs(dias, hhmm) {
+    return new Date(Date.now() - dias * 864e5).toISOString().slice(0, 10) + `T${hhmm}:00.000Z`;
+}
+
 function movimento(codigo, dataHora, ocorrencia = 1) {
     return { codigo, nome: `Movimento ${codigo}`, dataHora, chave: dataHora, ocorrencia };
 }
@@ -131,6 +136,61 @@ describe('alertas: sync e escalonamento (integração)', { skip: banco.motivoPul
         const resultados = await Promise.all([gerarAlertasPendentes(), gerarAlertasPendentes(), gerarAlertasPendentes()]);
         assert.equal(resultados.reduce((s, r) => s + r.criados, 0), 1);
         assert.equal(await alertasDo(p.id), 1);
+    });
+
+    test('MEL-17: movimentos relevantes do mesmo dia viram um alerta só, com um e-mail', async () => {
+        await usuariosModel.create({ nome: 'Advogada MEL17', email: 'mel17@teste.local', senhaHash: 'x', papel: 'advogado' });
+        const p = await novoProcesso();
+        await aplicarDadosDaFonte(p, dadosFonte([movimento(JUNTADA, diasAtras(100))]), OPCOES);
+        const envio = mock.method(mailer, 'enviarEmail', async () => ({ ok: true }));
+        const destinatarios = (await usuariosModel.listAtivosPorPapeis(['procurador', 'advogado', 'assistente_juridico'])).length;
+
+        const dados = dadosFonte([
+            movimento(INTIMACAO, diaAtrasAs(2, '09:00')),
+            movimento(INTIMACAO, diaAtrasAs(2, '09:01')),
+            movimento(INTIMACAO, diaAtrasAs(2, '18:30')),
+            movimento(INTIMACAO, diaAtrasAs(1, '10:00'))
+        ]);
+        const r = await aplicarDadosDaFonte(p, dados, OPCOES);
+        assert.equal(r.movimentosNovos, 4);
+        assert.equal(r.alertasCriados, 2, 'um alerta para o dia -2 e outro para o dia -1');
+        assert.equal(await alertasDo(p.id), 2);
+        assert.equal(await pendentesDo(p.id), 0);
+        assert.equal(envio.mock.callCount(), 2 * destinatarios, 'um e-mail por alerta, não por movimento');
+
+        const { rows } = await pool.query('SELECT id FROM alertas WHERE processo_id = $1 ORDER BY id', [p.id]);
+        assert.equal((await alertasModel.listMovimentos(rows[0].id)).length, 3);
+        assert.equal((await alertasModel.listMovimentos(rows[1].id)).length, 1);
+        assert.equal((await alertasModel.findById(rows[0].id)).qtd_movimentos, 3);
+    });
+
+    test('MEL-17: movimento novo depois da ciência abre outro alerta (não fica escondido)', async () => {
+        const p = await novoProcesso();
+        await aplicarDadosDaFonte(p, dadosFonte([movimento(JUNTADA, diasAtras(100))]), OPCOES);
+        await aplicarDadosDaFonte(p, dadosFonte([movimento(INTIMACAO, diaAtrasAs(1, '09:00'))]), OPCOES);
+        await pool.query(`UPDATE alertas SET status = 'ciente', ciente_em = NOW() WHERE processo_id = $1`, [p.id]);
+
+        const r = await aplicarDadosDaFonte(p, dadosFonte([movimento(INTIMACAO, diaAtrasAs(1, '09:00')), movimento(INTIMACAO, diaAtrasAs(1, '15:00'))]), OPCOES);
+        assert.equal(r.alertasCriados, 1);
+        const { rows } = await pool.query('SELECT status FROM alertas WHERE processo_id = $1 ORDER BY id', [p.id]);
+        assert.deepEqual(rows.map((x) => x.status), ['ciente', 'pendente']);
+    });
+
+    test('MEL-17: movimentos do mesmo dia tratados em paralelo não abrem dois alertas', async () => {
+        const p = await novoProcesso();
+        await aplicarDadosDaFonte(p, dadosFonte([movimento(JUNTADA, diasAtras(100))]), OPCOES);
+        for (const hora of ['10:00', '10:05', '10:10']) {
+            await pool.query(
+                `INSERT INTO movimentos (processo_id, codigo_tpu, nome, data_hora, relevante_para_prazo, hash_dedup, alerta_pendente)
+                 VALUES ($1, $2, 'Intimação', $3, TRUE, md5(random()::text) || md5(random()::text), TRUE)`,
+                [p.id, INTIMACAO, diaAtrasAs(3, hora)]
+            );
+        }
+        await Promise.all([gerarAlertasPendentes(), gerarAlertasPendentes(), gerarAlertasPendentes()]);
+        assert.equal(await alertasDo(p.id), 1);
+        assert.equal(await pendentesDo(p.id), 0);
+        const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM movimentos WHERE processo_id = $1 AND alerta_id IS NOT NULL', [p.id]);
+        assert.equal(rows[0].n, 3, 'todo movimento relevante fica ligado a um alerta');
     });
 
     test('BUG-04: alerta que recebeu ciência antes de ser escalado não é escalado nem notificado', async () => {

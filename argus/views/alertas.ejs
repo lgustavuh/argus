@@ -36,7 +36,7 @@
                     <span class="urgencia <%= a.peso_urgencia >= 4 ? 'urgencia-alta' : (a.peso_urgencia >= 2 ? 'urgencia-media' : 'urgencia-baixa') %>" title="Peso de urgência <%= a.peso_urgencia %>"></span>
                 </td>
                 <td class="mono"><%= fmtCnj(a.numero_processo) %></td>
-                <td><%= a.movimento_nome || '—' %></td>
+                <td><%= a.movimento_nome || '—' %><% if (a.qtd_movimentos > 1) { %> <span class="meta" title="Movimentações do mesmo dia reunidas neste alerta">+<%= a.qtd_movimentos - 1 %></span><% } %></td>
                 <td><span class="badge <%= a.status %>"><%= a.status %></span></td>
                 <td class="meta"><%= fmtDataHora(a.criado_em) %></td>
                 <td>
