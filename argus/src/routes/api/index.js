@@ -27,19 +27,19 @@ const router = express.Router();
 router.post('/auth/login', a(async (req, res) => {
     const email = String(req.body.email || '').toLowerCase().trim();
     const senha = String(req.body.senha || '');
-    const bloqueio = limiteLogin.minutosBloqueado(req, email);
+    const bloqueio = await limiteLogin.minutosBloqueado(req, email);
     if (bloqueio) return res.status(429).json({ erro: `Muitas tentativas. Tente em ${bloqueio} minuto(s).` });
 
     // Mesmo servico da tela: compara a senha mesmo sem usuario (tempo constante, PRD BUG-05).
     const { usuario, valido } = await verificarCredenciais(email, senha);
     if (!valido) {
-        limiteLogin.registrarFalha(req, email);
+        await limiteLogin.registrarFalha(req, email);
         await auditoria.registrar(req, 'login_falha', { detalhes: { email, via: 'api' }, usuario: usuario || null });
         return res.status(401).json({ erro: 'Credenciais invalidas' });
     }
     if (usuario.deve_trocar_senha) return res.status(403).json({ erro: 'Troque a senha provisoria pela tela antes de usar a API' });
 
-    limiteLogin.registrarSucesso(req, email);
+    await limiteLogin.registrarSucesso(req, email);
     await usuariosModel.registrarLogin(usuario.id);
     await auditoria.registrar(req, 'login', { entidade: 'usuario', entidadeId: usuario.id, usuario, detalhes: { via: 'api' } });
     res.json({ token: gerarToken(usuario), usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, papel: usuario.papel } });

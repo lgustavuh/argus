@@ -51,7 +51,7 @@ router.post('/login', a(async (req, res) => {
     const email = (req.body.email || '').toLowerCase().trim();
     const senha = req.body.senha || '';
 
-    const bloqueio = limiteLogin.minutosBloqueado(req, email);
+    const bloqueio = await limiteLogin.minutosBloqueado(req, email);
     if (bloqueio) {
         await auditoria.registrar(req, 'login_bloqueado', { detalhes: { email } });
         return res.status(429).render('login', {
@@ -61,12 +61,12 @@ router.post('/login', a(async (req, res) => {
 
     const { usuario, valido } = await verificarCredenciais(email, senha);
     if (!valido) {
-        limiteLogin.registrarFalha(req, email);
+        await limiteLogin.registrarFalha(req, email);
         await auditoria.registrar(req, 'login_falha', { detalhes: { email }, usuario: usuario || null });
         return res.status(401).render('login', { erro: 'E-mail ou senha inválidos.' });
     }
 
-    limiteLogin.registrarSucesso(req, email);
+    await limiteLogin.registrarSucesso(req, email);
     await usuariosModel.registrarLogin(usuario.id);
     await auditoria.registrar(req, 'login', { entidade: 'usuario', entidadeId: usuario.id, usuario });
     definirCookieSessao(res, usuario);
