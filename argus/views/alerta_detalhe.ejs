@@ -13,34 +13,35 @@
 <% if (msg) { %><div class="msg-flash"><%= msg %></div><% } %>
 
 <div class="card">
+    <%- include('partials/abrir_no_tribunal', { p: alerta, voltar: '/alertas/' + alerta.id }) %>
+</div>
+
+<div class="card">
     <p><strong>Movimentação:</strong> <%= alerta.movimento_nome || '—' %> <span class="meta">(código TPU: <span class="mono"><%= alerta.codigo_tpu || '—' %></span>)</span></p>
     <p><strong>Data da movimentação:</strong> <%= fmtDataHora(alerta.movimento_data_hora) %></p>
     <% var sist = sistemaDoProcesso(alerta); %>
-    <p><strong>Sistema:</strong> <%= sist ? sist.rotulo : 'não informado pelo DataJud' %></p>
+    <p><strong>Sistema:</strong> <%= sist ? sist.rotulo + (sist.informado ? ' (informado pela Procuradoria)' : '') : 'não identificado' %></p>
     <p><strong>Responsável pelo processo:</strong> <%= alerta.procurador_nome || 'não definido' %></p>
 
     <dl class="trilha">
         <dt>Alerta criado</dt><dd><%= fmtDataHora(alerta.criado_em) %></dd>
         <dt>Visualizado</dt><dd><%= alerta.visualizado_em ? fmtDataHora(alerta.visualizado_em) + (alerta.visualizado_por_nome ? ' por ' + alerta.visualizado_por_nome : '') : '—' %></dd>
         <dt>Escalado</dt><dd><%= alerta.escalado_em ? fmtDataHora(alerta.escalado_em) + (alerta.escalado_para_nome ? ' para ' + alerta.escalado_para_nome : '') : '—' %></dd>
-        <dt>Ciência</dt><dd><%= alerta.ciente_em ? fmtDataHora(alerta.ciente_em) + (alerta.ciente_por_nome ? ' por ' + alerta.ciente_por_nome : '') : '—' %></dd>
+        <dt>Ciente no Argus</dt><dd><%= alerta.ciente_em ? fmtDataHora(alerta.ciente_em) + (alerta.ciente_por_nome ? ' por ' + alerta.ciente_por_nome : '') : '—' %></dd>
     </dl>
 
     <div class="filtros acoes">
-        <% if (alerta.link_consulta_publica) { %>
-        <a class="btn secondary" href="<%= alerta.link_consulta_publica %>" target="_blank" rel="noopener">Consultar no <%= sist ? sist.rotulo : 'sistema de origem' %></a>
-        <% } else { linksAlternativos(alerta).forEach(function(l) { %>
-        <a class="btn secondary" href="<%= l.url %>" target="_blank" rel="noopener">Consultar no <%= l.rotulo %></a>
-        <% }) } %>
         <a class="btn secondary" href="/processos/<%= alerta.processo_id %>">Ver processo completo</a>
         <% if (alerta.status !== 'ciente' && pode('darCiencia')) { %>
-        <form class="inline" method="post" action="/alertas/<%= alerta.id %>/ciencia" data-confirmar="Confirmar ciência desta movimentação? A ação fica registrada com seu nome.">
-            <button type="submit">Dar ciência</button>
+        <form class="inline" method="post" action="/alertas/<%= alerta.id %>/ciencia" data-confirmar="Confirmar que você viu este alerta? Fica registrado com seu nome. Isto NÃO dá ciência no tribunal.">
+            <button type="submit" class="secondary">Estou ciente (só no Argus)</button>
         </form>
         <% } %>
     </div>
     <% if (alerta.status !== 'ciente' && !pode('darCiencia')) { %>
-    <p class="meta">Somente procuradores e advogados podem dar ciência.</p>
+    <p class="meta">Somente procuradores e advogados podem confirmar ciência no Argus.</p>
+    <% } else if (alerta.status !== 'ciente') { %>
+    <p class="meta">"Estou ciente" só registra no Argus que a equipe viu o alerta e interrompe o escalonamento. A ciência da intimação e as providências são feitas no sistema do tribunal.</p>
     <% } %>
 </div>
 
@@ -68,7 +69,7 @@
             <tr>
                 <td class="meta"><%= fmtDataHora(h.criado_em) %></td>
                 <td><%= h.usuario_nome || '—' %></td>
-                <td><%= h.acao === 'alerta_ciencia' ? 'Deu ciência' : (h.acao === 'alerta_visualizado' ? 'Visualizou' : h.acao) %></td>
+                <td><%= h.acao === 'alerta_ciencia' ? 'Ciente no Argus' : (h.acao === 'alerta_visualizado' ? 'Visualizou' : h.acao) %></td>
             </tr>
             <% }) %>
         </tbody>

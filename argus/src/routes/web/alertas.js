@@ -48,9 +48,9 @@ router.get('/:id', a(async (req, res) => {
 
 router.post('/:id/ciencia', requirePermissao('darCiencia'), a(async (req, res) => {
     const alerta = await alertasModel.marcarCiente(req.params.id, req.usuario.id);
-    if (!alerta) return res.redirect(comMsg(`/alertas/${req.params.id}`, 'Este alerta já estava com ciência confirmada.'));
+    if (!alerta) return res.redirect(comMsg(`/alertas/${req.params.id}`, 'Este alerta já estava marcado como ciente no Argus.'));
     await auditoria.registrar(req, 'alerta_ciencia', { entidade: 'alerta', entidadeId: alerta.id });
-    res.redirect(comMsg(`/alertas/${alerta.id}`, 'Ciência registrada.'));
+    res.redirect(comMsg(`/alertas/${alerta.id}`, 'Ciência registrada no Argus. Lembre-se: a ciência da intimação é feita no sistema do tribunal.'));
 }));
 
 module.exports = router;

@@ -169,7 +169,9 @@ router.post('/:id/sistema', requirePermissao('gerenciarProcessos'), a(async (req
     });
     await processosModel.setSistemaInformado(processo.id, sistema, link);
     await auditoria.registrar(req, 'processo_sistema', { entidade: 'processo', entidadeId: processo.id, detalhes: { sistema: sistema || 'datajud' } });
-    res.redirect(comMsg(`/processos/${processo.id}`, sistema ? `Sistema definido como ${SISTEMAS_CONHECIDOS[sistema]}.` : 'Voltando a usar o sistema informado pelo DataJud.'));
+    // So volta para tela local conhecida (evita redirecionamento aberto).
+    const destino = /^\/alertas\/\d+$/.test(req.body.voltar || '') ? req.body.voltar : `/processos/${processo.id}`;
+    res.redirect(comMsg(destino, sistema ? `Sistema definido como ${SISTEMAS_CONHECIDOS[sistema]}.` : 'Voltando a usar o sistema informado pelo DataJud.'));
 }));
 
 router.post('/:id/ativo', requirePermissao('gerenciarProcessos'), a(async (req, res) => {

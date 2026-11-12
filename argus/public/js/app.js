@@ -5,6 +5,24 @@
         el.addEventListener('change', function () { el.form.submit(); });
     });
 
+    // <button data-copiar="texto"> copia o texto (ex.: numero do processo para colar no eproc, que pede CAPTCHA).
+    document.querySelectorAll('[data-copiar]').forEach(function (btn) {
+        var original = btn.textContent;
+        btn.addEventListener('click', function () {
+            var texto = btn.getAttribute('data-copiar');
+            function feito() {
+                btn.textContent = 'Copiado';
+                setTimeout(function () { btn.textContent = original; }, 2000);
+            }
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(texto).then(feito, function () { window.prompt('Copie o número:', texto); });
+            } else {
+                // http://IP:3000 nao e contexto seguro: a API de area de transferencia nao existe.
+                window.prompt('Copie o número:', texto);
+            }
+        });
+    });
+
     // <form data-confirmar="mensagem"> pede confirmacao antes de enviar.
     document.querySelectorAll('form[data-confirmar]').forEach(function (form) {
         form.addEventListener('submit', function (ev) {

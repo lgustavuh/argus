@@ -13,7 +13,7 @@ const { verificarOrigem } = require('./middleware/origem');
 const { formatar } = require('./util/cnj');
 const { fmtDia, diaDaSemana } = require('./util/datas');
 const { ROTULOS_PAPEL } = require('./config/papeis');
-const { normalizarSistema, linksAlternativos, SISTEMAS_CONHECIDOS } = require('./services/linkBuilder');
+const { normalizarSistema, linksAlternativos, acessoNoTribunal, SISTEMAS_CONHECIDOS } = require('./services/linkBuilder');
 
 const apiRoutes = require('./routes/api');
 const webRoutes = require('./routes/web');
@@ -70,6 +70,7 @@ app.locals.linksAlternativos = (p) =>
 // Colunas DATE chegam como 'AAAA-MM-DD' e sao formatadas sem conversao de fuso; instantes passam por America/Sao_Paulo.
 app.locals.fmtData = (d) => fmtDia(d) || (d ? new Date(d).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—');
 app.locals.diaDaSemana = diaDaSemana;
+app.locals.acessoNoTribunal = acessoNoTribunal;
 // Para trechos montados como HTML na view (<%- ... %>): escapa texto vindo do banco.
 app.locals.escapar = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 app.locals.fmtDataHora = (d) => (d ? new Date(d).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—');

@@ -132,7 +132,7 @@
             <thead><tr><th></th><% PAPEIS_VALIDOS.forEach(function(p) { %><th><%= ROTULOS_PAPEL[p] %></th><% }) %></tr></thead>
             <tbody>
                 <tr><td>Ver todos os processos e alertas</td><% PAPEIS_VALIDOS.forEach(function() { %><td>✓</td><% }) %></tr>
-                <% [['darCiencia','Dar ciência em alertas'],['gerenciarProcessos','Cadastrar, importar e arquivar processos'],['rodarSync','Disparar atualização manual'],['configurar','Configurações e usuários']].forEach(function(acao) { %>
+                <% [['darCiencia','Confirmar ciência de alertas (só no Argus)'],['gerenciarProcessos','Cadastrar, importar e arquivar processos'],['rodarSync','Disparar atualização manual'],['configurar','Configurações e usuários']].forEach(function(acao) { %>
                 <tr><td><%= acao[1] %></td><% PAPEIS_VALIDOS.forEach(function(p) { %><td><%= PERMISSOES[acao[0]].includes(p) ? '✓' : '—' %></td><% }) %></tr>
                 <% }) %>
                 <tr><td>Recebe alertas por e-mail</td><% PAPEIS_VALIDOS.forEach(function(p) { %><td><%= p === 'admin' ? '—' : '✓' %></td><% }) %></tr>

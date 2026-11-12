@@ -39,7 +39,7 @@ alertas**. O que muda é o que cada um pode alterar:
 | Ação | Procurador | Advogado | Assistente Jurídico | Admin (TI) |
 |---|:-:|:-:|:-:|:-:|
 | Ver processos, alertas e linha do tempo | ✓ | ✓ | ✓ | ✓ |
-| Dar ciência em alertas | ✓ | ✓ | — | ✓ |
+| Confirmar ciência no Argus (não é ciência no tribunal) | ✓ | ✓ | — | ✓ |
 | Cadastrar, importar, arquivar processos; definir responsável | ✓ | ✓ | — | ✓ |
 | Lançar, editar e concluir prazos, audiências e tarefas na agenda | ✓ | ✓ | — | ✓ |
 | Casos, etiquetas, anotações, documentos e modelos | ✓ | ✓ | — | ✓ |
@@ -51,7 +51,12 @@ alertas**. O que muda é o que cada um pode alterar:
 
 - A **assistente jurídica** tem acesso somente leitura: abrir um alerta não muda o status dele.
 - Abrir um alerta como procurador/advogado registra a **visualização** automaticamente; a
-  **ciência** é um clique explícito, registrado com nome e horário.
+  **ciência** é um clique explícito, registrado com nome e horário. É uma ciência **interna** (a equipe
+  viu o alerta e o escalonamento para); a ciência da intimação é feita no PJe/eproc.
+- Cada alerta tem o botão **"Abrir no PJe/eproc"**, que leva à consulta do processo no sistema do
+  tribunal, e "Copiar número" (o eproc pede CAPTCHA). Se o sistema não for conhecido, o alerta
+  mostra os dois e o procurador/advogado informa em qual o processo tramita. O Argus nunca abre o
+  teor de intimações nem pratica ato no tribunal.
 - As regras ficam em `src/config/papeis.js` — altere lá, não espalhe verificações de perfil pelo código.
 
 ## Como os processos entram no sistema

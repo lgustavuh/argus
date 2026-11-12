@@ -7,6 +7,7 @@ const mensagens = require('./mensagensEmail');
 // Acessado como `mailer.enviarEmail` (e nao desestruturado) para que os testes possam substitui-lo.
 const mailer = require('./mailer');
 const { PAPEIS_RECEBEM_ALERTAS, PAPEL_ESCALONAMENTO } = require('../config/papeis');
+const { acessoNoTribunal } = require('./linkBuilder');
 
 async function destinatariosAlerta() {
     const usuarios = await usuariosModel.listAtivosPorPapeis(PAPEIS_RECEBEM_ALERTAS);
@@ -43,7 +44,7 @@ async function notificarNovoAlerta({ alerta, processo, movimento }) {
                 orgao: processo.orgao_julgador,
                 tribunal: processo.tribunal,
                 responsavel: responsavel?.nome,
-                linkOrigem: processo.link_consulta_publica
+                acesso: acessoNoTribunal(processo)
             })
         );
     } catch (err) {
@@ -126,7 +127,7 @@ async function escalarAlertasVencidos() {
                         orgao: a.orgao_julgador,
                         tribunal: a.tribunal,
                         responsavel: a.procurador_nome,
-                        linkOrigem: a.link_consulta_publica,
+                        acesso: acessoNoTribunal(a),
                         criadoEm: a.criado_em,
                         dias: a.prazo_dias_alerta || prazoDiasPadrao
                     },

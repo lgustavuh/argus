@@ -163,7 +163,7 @@ Encontrados na revisão de 11/11/2026. Severidade: 🔴 alta · 🟠 média · �
 - **MEL-13 Alerta de "processo parado"** (sem movimentação há N dias) como notificação, não só no painel.
 - **MEL-14 Exportação** (CSV/PDF) de processos, alertas e agenda para relatórios à chefia.
 - **MEL-15 Retenção/LGPD:** política de expurgo de auditoria e documentos de processos arquivados.
-- **MEL-16 Botão "Abrir no PJe/eproc"** em cada alerta e processo, levando ao sistema certo; quando o
+- ✅ **MEL-16 Botão "Abrir no PJe/eproc"** (12/11/2026: alerta, lista, processo e e-mail; "Copiar número"; sistema informado direto no alerta; "Estou ciente (só no Argus)") em cada alerta e processo, levando ao sistema certo; quando o
   sistema é desconhecido, pedir que seja informado (uma vez por processo) em vez de mostrar dois links.
 - **MEL-17 Uma intimação, um alerta:** movimentos relevantes do mesmo processo em janela curta formam um
   único alerta (em 12/11, uma única publicação gerou 3 alertas: disponibilização no DJe, expedição e publicação).

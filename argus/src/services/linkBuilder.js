@@ -64,4 +64,23 @@ function linksAlternativos({ numeroProcesso, tribunal, grau }) {
     ];
 }
 
-module.exports = { buildLinkConsultaPublica, linksAlternativos, normalizarSistema, SISTEMAS_CONHECIDOS };
+/**
+ * Como levar o procurador ao processo no sistema do tribunal (botao "Abrir no PJe/eproc").
+ * Calculado na hora a partir do processo, para nao depender de link gravado desatualizado.
+ *   sistema: { chave, rotulo, informado } | null
+ *   principal: { rotulo, url } | null      -> um botao so, quando o sistema e conhecido
+ *   alternativos: [{ sistema, rotulo, url }] -> PJe e eproc lado a lado, quando nao e
+ */
+function acessoNoTribunal(p) {
+    const chave = normalizarSistema(p.sistema_informado) || normalizarSistema(p.sistema);
+    const sistema = chave ? { chave, rotulo: SISTEMAS_CONHECIDOS[chave], informado: Boolean(normalizarSistema(p.sistema_informado)) } : null;
+    const dados = { numeroProcesso: p.numero_processo, tribunal: p.tribunal, grau: p.grau, sistema: chave };
+    const url = buildLinkConsultaPublica(dados);
+    return {
+        sistema,
+        principal: url ? { rotulo: sistema.rotulo, url } : null,
+        alternativos: url ? [] : linksAlternativos(dados)
+    };
+}
+
+module.exports = { buildLinkConsultaPublica, linksAlternativos, acessoNoTribunal, normalizarSistema, SISTEMAS_CONHECIDOS };

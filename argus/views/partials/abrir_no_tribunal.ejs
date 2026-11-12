@@ -1,0 +1,27 @@
+<%# Botao "Abrir no PJe/eproc" (PRD MEL-16). Parametros: p (processo ou linha de alerta com numero_processo,
+    tribunal, grau, sistema, sistema_informado e processo_id ou id), voltar (opcional: URL local para
+    onde voltar depois de informar o sistema). O Argus so leva ao tribunal; nao pratica ato nenhum la. %>
+<% var acesso = acessoNoTribunal(p); var processoId = p.processo_id || p.id; var numeroFmt = fmtCnj(p.numero_processo); %>
+<div class="abrir-tribunal">
+    <% if (acesso.principal) { %>
+    <a class="btn" href="<%= acesso.principal.url %>" target="_blank" rel="noopener">Abrir no <%= acesso.principal.rotulo %> &#8599;</a>
+    <% } else if (acesso.alternativos.length) { %>
+    <% acesso.alternativos.forEach(function(l) { %>
+    <a class="btn secondary" href="<%= l.url %>" target="_blank" rel="noopener">Abrir no <%= l.rotulo %> &#8599;</a>
+    <% }) %>
+    <% } %>
+    <button type="button" class="secondary" data-copiar="<%= numeroFmt %>">Copiar número</button>
+</div>
+<% if (!acesso.principal && acesso.alternativos.length) { %>
+<p class="meta">Ainda não se sabe em qual sistema este processo tramita (o DataJud não informa).
+    <% if (pode('gerenciarProcessos')) { %>Depois de encontrá-lo, informe aqui para que o próximo alerta já abra no sistema certo:<% } %></p>
+<% if (pode('gerenciarProcessos')) { %>
+<form method="post" action="/processos/<%= processoId %>/sistema" class="filtros">
+    <% if (typeof voltar !== 'undefined' && voltar) { %><input type="hidden" name="voltar" value="<%= voltar %>"><% } %>
+    <button type="submit" name="sistema" value="pje" class="secondary">Tramita no PJe</button>
+    <button type="submit" name="sistema" value="eproc" class="secondary">Tramita no eproc</button>
+</form>
+<% } %>
+<% } else if (!acesso.principal) { %>
+<p class="meta">Link direto para o <%= String(p.tribunal || '').toUpperCase() %> ainda não disponível no Argus: use o número para consultar no sistema do tribunal.</p>
+<% } %>

@@ -22,7 +22,14 @@ async function aparencia() {
     };
 }
 
-function infosProcesso({ numero, movimento, dataMovimento, classe, orgao, tribunal, responsavel }) {
+// Link "Abrir no PJe/eproc" do e-mail. Sem sistema conhecido nao ha link unico: o alerta no Argus
+// mostra as duas opcoes.
+function linkTribunal(acesso) {
+    if (!acesso?.principal) return null;
+    return { texto: `Abrir o processo no ${acesso.principal.rotulo}`, url: acesso.principal.url };
+}
+
+function infosProcesso({ numero, movimento, dataMovimento, classe, orgao, tribunal, responsavel, acesso }) {
     return [
         ['Processo', formatar(numero), true],
         ['Movimentação', movimento],
@@ -30,12 +37,14 @@ function infosProcesso({ numero, movimento, dataMovimento, classe, orgao, tribun
         ['Classe', classe],
         ['Órgão julgador', orgao],
         ['Tribunal', tribunal ? tribunal.toUpperCase() : null],
+        ['Sistema', acesso ? (acesso.sistema ? acesso.sistema.rotulo : 'não identificado (veja no Argus)') : null],
         ['Responsável', responsavel || 'não definido']
     ];
 }
 
 /**
- * @param {object} d { alertaId, numero, movimento, dataMovimento, classe, orgao, tribunal, responsavel, linkOrigem }
+ * @param {object} d { alertaId, numero, movimento, dataMovimento, classe, orgao, tribunal, responsavel, acesso }
+ *   acesso: resultado de linkBuilder.acessoNoTribunal(processo)
  */
 async function novoAlerta(d, ap) {
     ap = ap || (await aparencia());
@@ -44,10 +53,10 @@ async function novoAlerta(d, ap) {
         aparencia: ap,
         assunto: `Nova movimentação — ${formatar(d.numero)}`,
         titulo: 'Nova movimentação que pode abrir prazo',
-        texto: 'O Argus identificou uma movimentação que pode abrir prazo processual. Confira os detalhes e registre a ciência no sistema.',
+        texto: 'O Argus identificou uma movimentação que pode abrir prazo processual. Confira e tome as providências no sistema do tribunal. O Argus não dá ciência no tribunal.',
         infos: infosProcesso(d),
         botao: { texto: 'Ver alerta no Argus', url: `${baseUrl()}/alertas/${d.alertaId}` },
-        linkSecundario: d.linkOrigem ? { texto: 'Consultar o processo no sistema do tribunal', url: d.linkOrigem } : null
+        linkSecundario: linkTribunal(d.acesso)
     });
 }
 
@@ -61,10 +70,10 @@ async function alertaEscalado(d, ap) {
         aparencia: ap,
         assunto: `Alerta ESCALADO — ${formatar(d.numero)}`,
         titulo: `Alerta sem ciência há mais de ${d.dias} dia(s)`,
-        texto: 'Este alerta não teve ciência confirmada dentro do prazo interno da Procuradoria e foi escalado. Verifique se há prazo correndo.',
+        texto: 'Ninguém confirmou no Argus que viu este alerta dentro do prazo interno da Procuradoria, e ele foi escalado. Verifique no sistema do tribunal se há prazo correndo.',
         infos: [...infosProcesso(d), ['Alerta criado em', fmtDataHora(d.criadoEm)]],
         botao: { texto: 'Ver alerta no Argus', url: `${baseUrl()}/alertas/${d.alertaId}` },
-        linkSecundario: d.linkOrigem ? { texto: 'Consultar o processo no sistema do tribunal', url: d.linkOrigem } : null
+        linkSecundario: linkTribunal(d.acesso)
     });
 }
 
@@ -158,7 +167,7 @@ const EXEMPLO = {
     orgao: 'Vara Única da Comarca de Pratápolis',
     tribunal: 'tjmg',
     responsavel: 'Helena',
-    linkOrigem: 'https://pje-consulta-publica.tjmg.jus.br/',
+    acesso: { sistema: { chave: 'pje', rotulo: 'PJe' }, principal: { rotulo: 'PJe', url: 'https://pje-consulta-publica.tjmg.jus.br/' } },
     criadoEm: new Date(Date.now() - 4 * 864e5),
     dias: 3
 };

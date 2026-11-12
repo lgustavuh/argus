@@ -34,17 +34,8 @@ segredo de justiça, ainda não indexado pelo tribunal ou número digitado errad
             <dt>Cadastro</dt><dd><%= ROTULO_ORIGEM[processo.origem] || processo.origem %><%= processo.criado_por_nome ? ' por ' + processo.criado_por_nome : '' %>, <%= fmtDataHora(processo.criado_em) %></dd>
             <dt>Última consulta</dt><dd><%= fmtDataHora(processo.ultima_consulta_em) %></dd>
         </dl>
-        <% if (processo.link_consulta_publica) { %>
-        <p><a class="btn secondary" href="<%= processo.link_consulta_publica %>" target="_blank" rel="noopener">Consultar no <%= sist ? sist.rotulo : 'sistema de origem' %></a></p>
-        <% } else if (linksAlternativos(processo).length) { %>
-        <p class="meta">O DataJud não informa em qual sistema este processo tramita (comum em autos físicos e em processos convertidos recentemente). Consulte nos dois:</p>
-        <div class="filtros">
-            <% linksAlternativos(processo).forEach(function(l) { %>
-            <a class="btn secondary" href="<%= l.url %>" target="_blank" rel="noopener">Consultar no <%= l.rotulo %></a>
-            <% }) %>
-        </div>
-        <% } %>
-        <% if (pode('gerenciarProcessos') && processo.tribunal === 'tjmg') { %>
+        <%- include('partials/abrir_no_tribunal', { p: processo }) %>
+        <% if (pode('gerenciarProcessos') && processo.tribunal === 'tjmg' && sistemaDoProcesso(processo)) { %>
         <form method="post" action="/processos/<%= processo.id %>/sistema" class="filtros form-sistema">
             <label for="sistema">Sistema de tramitação</label>
             <select name="sistema" id="sistema">

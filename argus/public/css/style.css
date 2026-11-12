@@ -653,3 +653,4 @@ td .etiquetas { margin-top: 4px; display: flex; }
 .coluna-rotulo { text-align: center; font-size: 0.6875rem; color: var(--ink-muted); padding-top: 4px; white-space: nowrap; }
 .tabela-dados { margin-top: var(--space-md); }
 @media (max-width: 560px) { .coluna-rotulo { font-size: 0.6rem; } .coluna-rotulo .ano { display: none; } .colunas { gap: 2px; } }
+.abrir-tribunal { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin-bottom: var(--space-sm); }

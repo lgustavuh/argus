@@ -40,11 +40,14 @@
                 <td><span class="badge <%= a.status %>"><%= a.status %></span></td>
                 <td class="meta"><%= fmtDataHora(a.criado_em) %></td>
                 <td>
-                    <% var sa = sistemaDoProcesso(a); %>
-                    <% if (a.link_consulta_publica) { %>
-                    <a href="<%= a.link_consulta_publica %>" target="_blank" rel="noopener"><%= sa ? sa.rotulo : 'consultar' %></a>
+                    <% var ac = acessoNoTribunal(a); %>
+                    <% if (ac.principal) { %>
+                    <a href="<%= ac.principal.url %>" target="_blank" rel="noopener">Abrir no <%= ac.principal.rotulo %> &#8599;</a>
+                    <% } else if (ac.alternativos.length) { %>
+                    <span class="meta" title="Sistema ainda não identificado">?</span>
+                    <% ac.alternativos.forEach(function(l) { %><a href="<%= l.url %>" target="_blank" rel="noopener"><%= l.rotulo %></a> <% }) %>
                     <% } else { %>
-                    <span class="meta" title="O DataJud não informa o sistema deste processo">não informado</span>
+                    <span class="meta">—</span>
                     <% } %>
                 </td>
                 <td><%= a.procurador_nome || '—' %></td>

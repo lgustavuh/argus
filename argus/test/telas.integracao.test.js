@@ -1,0 +1,115 @@
+const banco = require('./helpers/banco'); // antes de src/ (define DATABASE_URL)
+
+const { test, describe, before, after } = require('node:test');
+const assert = require('node:assert/strict');
+
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'segredo-so-para-teste-'.repeat(3);
+
+const pool = require('../src/db/pool');
+const app = require('../src/app');
+const usuariosModel = require('../src/models/usuarios');
+const processosModel = require('../src/models/processos');
+const { gerarToken } = require('../src/middleware/auth');
+
+let servidor;
+let base;
+const sessao = {};
+
+async function criarUsuario(papel) {
+    const u = await usuariosModel.create({ nome: `Teste ${papel}`, email: `${papel}@telas.local`, senhaHash: 'x', papel });
+    const completo = await usuariosModel.findById(u.id);
+    return `token=${gerarToken(completo)}`;
+}
+
+function pedir(caminho, papel, opcoes = {}) {
+    return fetch(base + caminho, {
+        redirect: 'manual',
+        ...opcoes,
+        headers: { cookie: sessao[papel], 'sec-fetch-site': 'same-origin', ...(opcoes.headers || {}) }
+    });
+}
+
+async function novoAlerta(sistema) {
+    const numero = `${String(Math.floor(Math.random() * 1e7)).padStart(7, '0')}0020268130529`;
+    const p = await processosModel.inserirManual({ numeroProcesso: numero, tribunal: 'tjmg' });
+    await pool.query('UPDATE processos SET sistema = $1, grau = $2 WHERE id = $3', [sistema, 'G1', p.id]);
+    const { rows: [m] } = await pool.query(
+        `INSERT INTO movimentos (processo_id, codigo_tpu, nome, data_hora, relevante_para_prazo, hash_dedup)
+         VALUES ($1, 12265, 'Intimação', NOW(), TRUE, md5(random()::text) || md5(random()::text)) RETURNING id`,
+        [p.id]
+    );
+    const { rows: [al] } = await pool.query('INSERT INTO alertas (processo_id, movimento_id) VALUES ($1, $2) RETURNING id', [p.id, m.id]);
+    return { processoId: p.id, alertaId: al.id };
+}
+
+describe('telas: botão "Abrir no PJe/eproc" (MEL-16, integração)', { skip: banco.motivoPulo }, () => {
+    before(async () => {
+        await banco.resetar();
+        sessao.procurador = await criarUsuario('procurador');
+        sessao.assistente_juridico = await criarUsuario('assistente_juridico');
+        servidor = app.listen(0, '127.0.0.1');
+        await new Promise((r) => servidor.once('listening', r));
+        base = `http://127.0.0.1:${servidor.address().port}`;
+    });
+    after(async () => {
+        servidor?.close();
+        await banco.encerrar();
+    });
+
+    test('sistema conhecido: um botão só, direto para o PJe', async () => {
+        const { alertaId } = await novoAlerta('PJe');
+        const html = await (await pedir(`/alertas/${alertaId}`, 'procurador')).text();
+        assert.match(html, /Abrir no PJe/);
+        assert.doesNotMatch(html, /Abrir no eproc/);
+        assert.doesNotMatch(html, /Tramita no PJe/);
+        assert.match(html, /Estou ciente \(só no Argus\)/);
+    });
+
+    test('sistema desconhecido: PJe e eproc, e o procurador pode informar o sistema', async () => {
+        const { alertaId } = await novoAlerta('Inválido');
+        const html = await (await pedir(`/alertas/${alertaId}`, 'procurador')).text();
+        assert.match(html, /Abrir no PJe/);
+        assert.match(html, /Abrir no eproc/);
+        assert.match(html, /Tramita no eproc/);
+    });
+
+    test('assistente vê os links mas não o formulário de sistema', async () => {
+        const { alertaId } = await novoAlerta('Inválido');
+        const resp = await pedir(`/alertas/${alertaId}`, 'assistente_juridico');
+        assert.equal(resp.status, 200);
+        const html = await resp.text();
+        assert.match(html, /Abrir no eproc/);
+        assert.doesNotMatch(html, /Tramita no eproc/);
+    });
+
+    test('informar o sistema pelo alerta volta ao alerta, que passa a abrir só o eproc', async () => {
+        const { processoId, alertaId } = await novoAlerta('Inválido');
+        const resp = await pedir(`/processos/${processoId}/sistema`, 'procurador', {
+            method: 'POST',
+            headers: { 'content-type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ sistema: 'eproc', voltar: `/alertas/${alertaId}` }).toString()
+        });
+        assert.equal(resp.status, 302);
+        assert.match(resp.headers.get('location'), new RegExp(`^/alertas/${alertaId}\\b`));
+        const html = await (await pedir(`/alertas/${alertaId}`, 'procurador')).text();
+        assert.match(html, /Abrir no eproc/);
+        assert.doesNotMatch(html, /Abrir no PJe/);
+    });
+
+    test('"voltar" para fora do Argus é ignorado (sem redirecionamento aberto)', async () => {
+        const { processoId } = await novoAlerta('Inválido');
+        const resp = await pedir(`/processos/${processoId}/sistema`, 'procurador', {
+            method: 'POST',
+            headers: { 'content-type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ sistema: 'pje', voltar: 'https://exemplo.invalido/alertas/1' }).toString()
+        });
+        assert.equal(resp.status, 302);
+        assert.match(resp.headers.get('location'), new RegExp(`^/processos/${processoId}\\b`));
+    });
+
+    test('lista de alertas e detalhe do processo também mostram o botão', async () => {
+        const { processoId } = await novoAlerta('eproc');
+        assert.match(await (await pedir('/alertas?status=abertos', 'procurador')).text(), /Abrir no eproc/);
+        assert.match(await (await pedir(`/processos/${processoId}`, 'procurador')).text(), /Abrir no eproc/);
+    });
+});
