@@ -8,13 +8,15 @@ const casosModel = require('../../models/casos');
 const anotacoesModel = require('../../models/anotacoes');
 const etiquetasModel = require('../../models/etiquetas');
 const documentosModel = require('../../models/documentos');
-const { hojeSP } = require('../../util/datas');
+const { hojeSP, fmtDia } = require('../../util/datas');
+const { gerarCsv, enviarCsv } = require('../../util/csv');
+const { formatar } = require('../../util/cnj');
 const usuariosModel = require('../../models/usuarios');
 const auditoria = require('../../services/auditoria');
 const configuracoes = require('../../services/configuracoes');
 const { cadastrar, MAX_POR_IMPORTACAO } = require('../../services/cadastroProcessos');
 const { fonteAtiva } = require('../../fontes');
-const { buildLinkConsultaPublica, SISTEMAS_CONHECIDOS } = require('../../services/linkBuilder');
+const { buildLinkConsultaPublica, acessoNoTribunal, SISTEMAS_CONHECIDOS } = require('../../services/linkBuilder');
 const { requirePermissao } = require('../../middleware/auth');
 const { PAPEIS_RESPONSAVEIS } = require('../../config/papeis');
 const { lerPaginacao, montarPaginacao } = require('../../util/paginacao');
@@ -28,8 +30,9 @@ async function listarResponsaveis() {
     return usuariosModel.listAtivosPorPapeis(PAPEIS_RESPONSAVEIS);
 }
 
-router.get('/', a(async (req, res) => {
-    const filtro = {
+// Filtros da lista (tambem usados na exportacao, para exportar exatamente o que a tela mostra).
+async function lerFiltro(req) {
+    return {
         tribunal: req.query.tribunal || undefined,
         responsavelId: req.query.responsavelId || undefined,
         semResponsavel: req.query.semResponsavel === 'true',
@@ -40,6 +43,41 @@ router.get('/', a(async (req, res) => {
         etiqueta: req.query.etiqueta?.trim() || undefined,
         arquivados: req.query.arquivados === 'true'
     };
+}
+
+const MAX_EXPORTACAO = 10000;
+const ROTULO_SITUACAO = { aguardando: 'aguardando consulta', localizado: 'localizado', nao_localizado: 'não localizado' };
+
+// Exportacao CSV (PRD MEL-14). Declarada antes de '/:id'.
+router.get('/exportar.csv', a(async (req, res) => {
+    const filtro = await lerFiltro(req);
+    const { processos, total } = await processosModel.list(filtro, { limit: MAX_EXPORTACAO, offset: 0 });
+    const linhas = processos.map((p) => {
+        const acesso = acessoNoTribunal(p);
+        return [
+            formatar(p.numero_processo),
+            String(p.tribunal || '').toUpperCase(),
+            acesso.sistema ? acesso.sistema.rotulo : '',
+            p.classe_nome,
+            p.orgao_julgador,
+            p.procurador_nome,
+            ROTULO_SITUACAO[p.situacao_fonte] || p.situacao_fonte,
+            p.ultima_movimentacao ? new Date(p.ultima_movimentacao) : '',
+            fmtDia(p.data_ajuizamento),
+            p.etiquetas,
+            p.ativo ? 'não' : 'sim',
+            acesso.principal ? acesso.principal.url : ''
+        ];
+    });
+    await auditoria.registrar(req, 'exportacao', { detalhes: { tipo: 'processos', linhas: linhas.length, total } });
+    enviarCsv(res, `argus_processos_${hojeSP()}.csv`, gerarCsv(
+        ['Número', 'Tribunal', 'Sistema', 'Classe', 'Órgão julgador', 'Responsável', 'Situação na fonte', 'Última movimentação', 'Ajuizamento', 'Etiquetas', 'Arquivado', 'Link no tribunal'],
+        linhas
+    ));
+}));
+
+router.get('/', a(async (req, res) => {
+    const filtro = await lerFiltro(req);
     const pag = lerPaginacao(req);
     const [{ processos, total }, responsaveis, tribunais, etiquetas] = await Promise.all([
         processosModel.list(filtro, pag),
@@ -53,6 +91,7 @@ router.get('/', a(async (req, res) => {
         tribunais,
         etiquetas: etiquetas.filter((e) => e.processos > 0),
         filtro,
+        exportarUrl: `/processos/exportar.csv${req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : ''}`,
         paginacao: montarPaginacao(req, pag, total),
         msg: req.query.msg
     });

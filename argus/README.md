@@ -209,6 +209,7 @@ reverso com certificado (IIS com ARR, nginx ou Caddy) na frente da porta 3000 e 
 
 ## Operação do dia a dia
 
+- **Exportar CSV** nas telas de Processos (com o filtro aplicado) e Alertas: abre direto no Excel; cada exportação fica na auditoria.
 - **Contador vermelho no menu "Alertas"**: alertas sem ciência (pendentes, visualizados e escalados).
 - **Contador vermelho no menu "Agenda"**: compromissos com data passada que ninguém concluiu.
 - **Escalonamento**: verificado de hora em hora; alerta sem ciência no Argus depois de N **dias úteis**

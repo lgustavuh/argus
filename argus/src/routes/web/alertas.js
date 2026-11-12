@@ -8,10 +8,39 @@ const { requirePermissao } = require('../../middleware/auth');
 const { pode } = require('../../config/papeis');
 const { lerPaginacao, montarPaginacao } = require('../../util/paginacao');
 const { a, comMsg } = require('../../util/http');
+const { gerarCsv, enviarCsv } = require('../../util/csv');
+const { formatar } = require('../../util/cnj');
 
 const router = express.Router();
 
 const STATUS_VALIDOS = ['abertos', 'pendente', 'visualizado', 'escalado', 'ciente'];
+
+const ROTULO_STATUS = { pendente: 'pendente', visualizado: 'visualizado', escalado: 'escalado', ciente: 'ciente no Argus' };
+
+// Exportacao CSV (PRD MEL-14). Declarada antes de '/:id'.
+router.get('/exportar.csv', a(async (req, res) => {
+    const status = STATUS_VALIDOS.includes(req.query.status) ? req.query.status : null;
+    const { alertas, total } = await alertasModel.list({ status }, { limit: 10000, offset: 0 });
+    const linhas = alertas.map((al) => [
+        al.id,
+        formatar(al.numero_processo),
+        al.movimento_nome,
+        al.qtd_movimentos > 1 ? al.qtd_movimentos : 1,
+        al.movimento_data_hora ? new Date(al.movimento_data_hora) : '',
+        ROTULO_STATUS[al.status] || al.status,
+        al.criado_em ? new Date(al.criado_em) : '',
+        al.visualizado_em ? new Date(al.visualizado_em) : '',
+        al.ciente_em ? new Date(al.ciente_em) : '',
+        al.ciente_por_nome,
+        al.escalado_em ? new Date(al.escalado_em) : '',
+        al.procurador_nome
+    ]);
+    await auditoria.registrar(req, 'exportacao', { detalhes: { tipo: 'alertas', status, linhas: linhas.length, total } });
+    enviarCsv(res, `argus_alertas_${hojeSP()}.csv`, gerarCsv(
+        ['Alerta', 'Processo', 'Movimentação', 'Qtd. movimentações', 'Data da movimentação', 'Situação', 'Criado em', 'Visualizado em', 'Ciente no Argus em', 'Ciente por', 'Escalado em', 'Responsável pelo processo'],
+        linhas
+    ));
+}));
 
 router.get('/', a(async (req, res) => {
     const status = STATUS_VALIDOS.includes(req.query.status) ? req.query.status : null;

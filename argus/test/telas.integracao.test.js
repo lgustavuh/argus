@@ -166,6 +166,28 @@ describe('telas: botão "Abrir no PJe/eproc" (MEL-16, integração)', { skip: ba
         assert.match(await resp.text(), /sem movimentação há mais de 60 dias/);
     });
 
+    test('MEL-14: exporta processos e alertas em CSV, com auditoria e sem fórmula', async () => {
+        const { processoId } = await novoAlerta('PJe');
+        await pool.query(`UPDATE processos SET classe_nome = '=HYPERLINK("http://x")' WHERE id = $1`, [processoId]);
+        const resp = await pedir('/processos/exportar.csv', 'assistente_juridico');
+        assert.equal(resp.status, 200);
+        assert.match(resp.headers.get('content-type'), /text\/csv/);
+        assert.match(resp.headers.get('content-disposition'), /argus_processos_\d{4}-\d{2}-\d{2}\.csv/);
+        const csv = await resp.text();
+        assert.ok(csv.startsWith('Número;Tribunal;Sistema') || csv.startsWith('﻿Número;'), 'cabeçalho');
+        assert.ok(csv.includes(`"'=HYPERLINK(""http://x"")"`), 'fórmula neutralizada');
+        assert.ok(!/;=HYPERLINK/.test(csv));
+
+        const alertas = await (await pedir('/alertas/exportar.csv?status=abertos', 'procurador')).text();
+        assert.match(alertas, /Alerta;Processo;Movimentação/);
+
+        const { rows } = await pool.query(`SELECT detalhes FROM auditoria WHERE acao = 'exportacao' ORDER BY id`);
+        assert.deepEqual(rows.map((r) => (typeof r.detalhes === 'string' ? JSON.parse(r.detalhes) : r.detalhes).tipo), ['processos', 'alertas']);
+
+        const tela = await (await pedir('/processos?semSistema=true', 'procurador')).text();
+        assert.match(tela, /href="\/processos\/exportar\.csv\?semSistema=true"/, 'exporta o mesmo filtro da tela');
+    });
+
     test('lista de alertas e detalhe do processo também mostram o botão', async () => {
         const { processoId } = await novoAlerta('eproc');
         assert.match(await (await pedir('/alertas?status=abertos', 'procurador')).text(), /Abrir no eproc/);

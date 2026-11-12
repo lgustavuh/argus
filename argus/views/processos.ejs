@@ -7,7 +7,10 @@
 
 <div class="content-header">
     <h1><%= filtro.arquivados ? 'Processos arquivados' : 'Processos' %></h1>
-    <% if (pode('gerenciarProcessos')) { %><a class="btn" href="/processos/novo">Cadastrar processos</a><% } %>
+    <div class="filtros acoes-topo">
+        <a class="btn secondary" href="<%= exportarUrl %>" title="Exporta os processos deste filtro (até 10.000) para abrir no Excel">Exportar CSV</a>
+        <% if (pode('gerenciarProcessos')) { %><a class="btn" href="/processos/novo">Cadastrar processos</a><% } %>
+    </div>
 </div>
 
 <% if (msg) { %><div class="msg-flash"><%= msg %></div><% } %>

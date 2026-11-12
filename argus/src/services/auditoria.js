@@ -76,6 +76,7 @@ const ROTULOS_ACAO = {
     config_alterada: 'Alterou configurações',
     email_teste: 'Enviou e-mail de teste',
     email_reenviado: 'Reenviou e-mail que falhou',
+    exportacao: 'Exportou dados (CSV)',
     tpu_salvo: 'Salvou código TPU',
     tpu_removido: 'Removeu código TPU',
     usuario_criado: 'Criou usuário',

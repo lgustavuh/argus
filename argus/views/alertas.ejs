@@ -5,6 +5,7 @@
 
 <div class="content-header">
     <h1>Alertas</h1>
+    <a class="btn secondary" href="/alertas/exportar.csv<%= statusAtual ? '?status=' + statusAtual : '' %>" title="Exporta os alertas deste filtro para abrir no Excel">Exportar CSV</a>
 </div>
 
 <% if (msg) { %><div class="msg-flash"><%= msg %></div><% } %>
