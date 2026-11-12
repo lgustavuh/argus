@@ -2,7 +2,7 @@ const compromissosModel = require('../models/compromissos');
 const usuariosModel = require('../models/usuarios');
 const configuracoes = require('./configuracoes');
 const mensagens = require('./mensagensEmail');
-const { enviarEmail } = require('./mailer');
+const outbox = require('./outbox');
 const { PAPEL_ESCALONAMENTO } = require('../config/papeis');
 const { hojeSP, somarDias, diaDaSemana } = require('../util/datas');
 
@@ -19,7 +19,7 @@ function horaSP(agora = new Date()) {
 async function avisarAtribuicao(compromisso, autor) {
     if (!compromisso.responsavel_id || compromisso.responsavel_id === autor.id || !compromisso.responsavel_email) return;
     const msg = await mensagens.compromissoAtribuido(compromisso, autor.nome);
-    await enviarEmail({ to: compromisso.responsavel_email, ...msg });
+    await outbox.enfileirar({ to: compromisso.responsavel_email, ...msg }, { tipo: 'agenda_atribuicao', referencia: `compromisso:${compromisso.id}` });
 }
 
 /**
@@ -63,8 +63,8 @@ async function enviarResumosDiarios({ agora = new Date(), forcar = false } = {})
             vencidos: lista.filter((c) => c.data < hoje),
             proximos: lista.filter((c) => c.data >= hoje)
         });
-        const r = await enviarEmail({ to: usuario.email, ...msg });
-        if (r.ok) enviados++;
+        await outbox.enfileirar({ to: usuario.email, ...msg }, { tipo: 'agenda_resumo', referencia: `resumo:${hoje}` });
+        enviados++;
     }
     return enviados;
 }

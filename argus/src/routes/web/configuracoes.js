@@ -8,6 +8,7 @@ const codigosTpuModel = require('../../models/codigosTpu');
 const configuracoes = require('../../services/configuracoes');
 const auditoria = require('../../services/auditoria');
 const { enviarEmail } = require('../../services/mailer');
+const outbox = require('../../services/outbox');
 const mensagens = require('../../services/mensagensEmail');
 const { corValida } = require('../../services/emailTemplate');
 const { listarFontes, FONTES } = require('../../fontes');
@@ -47,6 +48,7 @@ router.get('/', a(async (req, res) => {
     if (aba === 'geral') {
         dados.seguranca = statusSeguranca();
         dados.backup = statusBackup();
+        dados.filaEmails = { contagem: await outbox.contarPorStatus() };
     } else if (aba === 'usuarios') {
         dados.usuarios = await usuariosModel.listAll();
         dados.PAPEIS_VALIDOS = PAPEIS_VALIDOS;
@@ -54,6 +56,9 @@ router.get('/', a(async (req, res) => {
         dados.PERMISSOES = PERMISSOES;
     } else if (aba === 'alertas') {
         dados.codigosTpu = await codigosTpuModel.listAll();
+    } else if (aba === 'email') {
+        const [contagem, problemas] = await Promise.all([outbox.contarPorStatus(), outbox.listarProblemas()]);
+        dados.filaEmails = { contagem, problemas, maxTentativas: outbox.MAX_TENTATIVAS };
     } else if (aba === 'integracao') {
         dados.fontes = listarFontes();
         dados.sync = await statusSync();
@@ -159,6 +164,18 @@ router.post('/email/teste', a(async (req, res) => {
         ? `E-mail de teste enviado para ${req.usuario.email}.`
         : `Falha no envio: ${resultado.motivo}`;
     res.redirect(comMsg('/configuracoes?aba=email', msg));
+}));
+
+router.post('/email/reenviar/:id(\\d+)', a(async (req, res) => {
+    const ok = await outbox.reenviar(Number(req.params.id));
+    if (ok) await auditoria.registrar(req, 'email_reenviado', { entidade: 'email', entidadeId: Number(req.params.id) });
+    res.redirect(comMsg('/configuracoes?aba=email', ok ? 'E-mail de volta à fila: sai no próximo minuto.' : 'Este e-mail não estava com falha.'));
+}));
+
+router.post('/email/reenviar-todos', a(async (req, res) => {
+    const total = await outbox.reenviarTodosQueFalharam();
+    if (total) await auditoria.registrar(req, 'email_reenviado', { detalhes: { total } });
+    res.redirect(comMsg('/configuracoes?aba=email', total ? `${total} e-mail(s) de volta à fila.` : 'Nenhum e-mail com falha.'));
 }));
 
 // ---------- Integracao (fonte de dados / sync / MNI) ----------

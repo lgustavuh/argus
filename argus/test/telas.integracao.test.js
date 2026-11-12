@@ -48,6 +48,7 @@ describe('telas: botão "Abrir no PJe/eproc" (MEL-16, integração)', { skip: ba
         await banco.resetar();
         sessao.procurador = await criarUsuario('procurador');
         sessao.assistente_juridico = await criarUsuario('assistente_juridico');
+        sessao.admin = await criarUsuario('admin');
         servidor = app.listen(0, '127.0.0.1');
         await new Promise((r) => servidor.once('listening', r));
         base = `http://127.0.0.1:${servidor.address().port}`;
@@ -119,6 +120,24 @@ describe('telas: botão "Abrir no PJe/eproc" (MEL-16, integração)', { skip: ba
         assert.match(html, /Movimentações deste alerta/);
         assert.match(html, /Publicação no DJe/);
         assert.match(await (await pedir('/alertas?status=abertos', 'procurador')).text(), /\+1<\/span>/);
+    });
+
+    test('MEL-11: admin vê a fila de e-mails e pode reenviar o que falhou', async () => {
+        const { rows: [e] } = await pool.query(
+            `INSERT INTO emails_saida (para, assunto, tipo, status, tentativas, ultimo_erro)
+             VALUES ('x@teste.local', 'Assunto falho', 'alerta_novo', 'falhou', 6, 'SMTP fora do ar') RETURNING id`
+        );
+        const html = await (await pedir('/configuracoes?aba=email', 'admin')).text();
+        assert.match(html, /Fila de e-mails/);
+        assert.match(html, /Assunto falho/);
+        assert.match(await (await pedir('/configuracoes?aba=geral', 'admin')).text(), /e-mail\(s\) não entregue\(s\)/);
+
+        const resp = await pedir(`/configuracoes/email/reenviar/${e.id}`, 'admin', { method: 'POST' });
+        assert.equal(resp.status, 302);
+        const { rows } = await pool.query('SELECT status FROM emails_saida WHERE id = $1', [e.id]);
+        assert.equal(rows[0].status, 'pendente');
+
+        assert.equal((await pedir(`/configuracoes/email/reenviar/${e.id}`, 'procurador', { method: 'POST' })).status, 403, 'procurador não acessa configurações');
     });
 
     test('lista de alertas e detalhe do processo também mostram o botão', async () => {

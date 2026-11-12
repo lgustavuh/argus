@@ -40,6 +40,7 @@
             <li class="<%= seguranca.cifragemDisponivel ? 'ok' : 'falha' %>">Chave de cifragem de senhas (ENCRYPTION_KEY) <%= seguranca.cifragemDisponivel ? 'configurada' : 'ausente' %></li>
             <li class="<%= seguranca.datajudChaveConfigurada ? 'ok' : 'falha' %>">Chave da API do DataJud <%= seguranca.datajudChaveConfigurada ? 'configurada' : 'ausente' %></li>
             <li class="<%= seguranca.cookieSeguro ? 'ok' : 'atencao' %>"><%= seguranca.cookieSeguro ? 'Acesso por HTTPS (cookie seguro)' : 'Acesso sem HTTPS — recomendado configurar um proxy com certificado antes de expor fora da rede interna' %></li>
+            <li class="<%= filaEmails.contagem.falhou ? 'falha' : 'ok' %>"><%= filaEmails.contagem.falhou ? filaEmails.contagem.falhou + ' e-mail(s) não entregue(s) — veja a aba E-mail' : 'Nenhum e-mail com falha de entrega' %></li>
             <li class="<%= backup.disponivel && backup.ultimo ? 'ok' : 'falha' %>">
                 <% if (backup.disponivel && backup.ultimo) { %>
                 Backup diário do banco: último em <%= fmtDataHora(backup.ultimo.data) %> (<%= (backup.ultimo.tamanho / 1024).toFixed(0) %> KB, <%= backup.total %> cópia(s) guardada(s))
@@ -217,6 +218,41 @@
             <li><strong>Alerta escalado:</strong> os mesmos, de novo, com o assunto "ESCALADO"; o procurador fica registrado como destino do escalonamento.</li>
         </ul>
     </div>
+</div>
+
+<div class="card">
+    <div class="card-title-row">
+        <h2>Fila de e-mails</h2>
+        <% if (filaEmails.contagem.falhou) { %>
+        <form method="post" action="/configuracoes/email/reenviar-todos"><button type="submit" class="secondary">Reenviar todos que falharam</button></form>
+        <% } %>
+    </div>
+    <p class="meta">Alertas e avisos da agenda entram nesta fila e saem em até um minuto. Se o servidor de e-mail falhar, o Argus tenta de novo até <%= filaEmails.maxTentativas %> vezes, com espera crescente (5 min a 6 h). Esgotadas as tentativas, o e-mail aparece aqui como "falhou" — o alerta continua no sistema de qualquer forma.</p>
+    <p>
+        <strong><%= filaEmails.contagem.enviado || 0 %></strong> enviado(s) nos últimos 90 dias ·
+        <strong><%= (filaEmails.contagem.pendente || 0) + (filaEmails.contagem.enviando || 0) %></strong> na fila ·
+        <strong class="<%= filaEmails.contagem.falhou ? 'texto-alerta' : '' %>"><%= filaEmails.contagem.falhou || 0 %></strong> com falha ·
+        <strong><%= filaEmails.contagem.descartado || 0 %></strong> não enviado(s) porque o envio estava desativado
+    </p>
+    <% if (filaEmails.problemas.length) { %>
+    <table>
+        <thead><tr><th>Criado</th><th>Para</th><th>Assunto</th><th>Situação</th><th>Último erro</th><th></th></tr></thead>
+        <tbody>
+            <% filaEmails.problemas.forEach(function(e) { %>
+            <tr>
+                <td class="meta"><%= fmtDataHora(e.criado_em) %></td>
+                <td><%= e.para %></td>
+                <td><%= e.assunto %></td>
+                <td><%= e.status === 'falhou' ? 'falhou (' + e.tentativas + ' tentativas)' : 'nova tentativa ' + fmtDataHora(e.proxima_tentativa_em) %></td>
+                <td class="meta"><%= e.ultimo_erro || '—' %></td>
+                <td><% if (e.status === 'falhou') { %><form method="post" action="/configuracoes/email/reenviar/<%= e.id %>"><button type="submit" class="secondary">Reenviar</button></form><% } %></td>
+            </tr>
+            <% }) %>
+        </tbody>
+    </table>
+    <% } else { %>
+    <p class="meta">Nenhum e-mail com problema.</p>
+    <% } %>
 </div>
 
 <div class="card">

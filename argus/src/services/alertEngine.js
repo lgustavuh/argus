@@ -4,8 +4,8 @@ const processosModel = require('../models/processos');
 const usuariosModel = require('../models/usuarios');
 const configuracoes = require('./configuracoes');
 const mensagens = require('./mensagensEmail');
-// Acessado como `mailer.enviarEmail` (e nao desestruturado) para que os testes possam substitui-lo.
 const mailer = require('./mailer');
+const outbox = require('./outbox');
 const { PAPEIS_RECEBEM_ALERTAS, PAPEL_ESCALONAMENTO } = require('../config/papeis');
 const { acessoNoTribunal } = require('./linkBuilder');
 
@@ -19,9 +19,10 @@ async function destinatariosAlerta() {
     return [...new Set(emails)];
 }
 
-async function enviarParaEquipe(mensagem) {
+// Entra na fila de saida (services/outbox): o envio, com novas tentativas, acontece fora do sync.
+async function enviarParaEquipe(mensagem, { tipo, referencia }) {
     for (const to of await destinatariosAlerta()) {
-        await mailer.enviarEmail({ to, ...mensagem });
+        await outbox.enfileirar({ to, ...mensagem }, { tipo, referencia });
     }
 }
 
@@ -45,7 +46,8 @@ async function notificarNovoAlerta({ alerta, processo, movimento }) {
                 tribunal: processo.tribunal,
                 responsavel: responsavel?.nome,
                 acesso: acessoNoTribunal(processo)
-            })
+            }),
+            { tipo: 'alerta_novo', referencia: `alerta:${alerta.id}` }
         );
     } catch (err) {
         console.error(`[alertas] Alerta ${alerta.id} criado, mas a notificacao por e-mail falhou:`, err.message);
@@ -135,7 +137,8 @@ async function escalarAlertasVencidos() {
                         dias: a.prazo_dias_alerta || prazoDiasPadrao
                     },
                     aparencia
-                )
+                ),
+                { tipo: 'alerta_escalado', referencia: `alerta:${a.id}` }
             );
         } catch (err) {
             console.error(`[alertas] Alerta ${vencido.id} escalado, mas a notificacao por e-mail falhou:`, err.message);

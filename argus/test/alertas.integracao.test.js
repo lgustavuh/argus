@@ -8,6 +8,7 @@ const processosModel = require('../src/models/processos');
 const alertasModel = require('../src/models/alertas');
 const usuariosModel = require('../src/models/usuarios');
 const mailer = require('../src/services/mailer');
+const outbox = require('../src/services/outbox');
 const { aplicarDadosDaFonte } = require('../src/services/reconciliation');
 const { gerarAlertasPendentes, escalarAlertasVencidos } = require('../src/services/alertEngine');
 
@@ -48,6 +49,9 @@ async function contar(sql, params = []) {
 }
 
 const alertasDo = (id) => contar('SELECT COUNT(*) AS n FROM alertas WHERE processo_id = $1', [id]);
+const emailsDoAlerta = (tipo, processoId) => contar(
+    `SELECT COUNT(*) AS n FROM emails_saida e JOIN alertas a ON e.referencia = 'alerta:' || a.id
+     WHERE e.tipo = $1 AND a.processo_id = $2`, [tipo, processoId]);
 const pendentesDo = (id) => contar('SELECT COUNT(*) AS n FROM movimentos WHERE processo_id = $1 AND alerta_pendente', [id]);
 
 describe('alertas: sync e escalonamento (integração)', { skip: banco.motivoPulo }, () => {
@@ -112,10 +116,10 @@ describe('alertas: sync e escalonamento (integração)', { skip: banco.motivoPul
         assert.equal(await alertasDo(p.id), 3);
     });
 
-    test('falha no e-mail não desfaz o alerta', async () => {
+    test('falha ao enfileirar o e-mail não desfaz o alerta', async () => {
         await usuariosModel.create({ nome: 'Procuradora Teste', email: 'proc@teste.local', senhaHash: 'x', papel: 'procurador' });
-        mock.method(mailer, 'enviarEmail', async () => {
-            throw new Error('SMTP fora do ar');
+        mock.method(outbox, 'enfileirar', async () => {
+            throw new Error('banco recusou a fila');
         });
         const p = await novoProcesso();
         await aplicarDadosDaFonte(p, dadosFonte([movimento(JUNTADA, diasAtras(100))]), OPCOES);
@@ -142,7 +146,6 @@ describe('alertas: sync e escalonamento (integração)', { skip: banco.motivoPul
         await usuariosModel.create({ nome: 'Advogada MEL17', email: 'mel17@teste.local', senhaHash: 'x', papel: 'advogado' });
         const p = await novoProcesso();
         await aplicarDadosDaFonte(p, dadosFonte([movimento(JUNTADA, diasAtras(100))]), OPCOES);
-        const envio = mock.method(mailer, 'enviarEmail', async () => ({ ok: true }));
         const destinatarios = (await usuariosModel.listAtivosPorPapeis(['procurador', 'advogado', 'assistente_juridico'])).length;
 
         const dados = dadosFonte([
@@ -156,7 +159,7 @@ describe('alertas: sync e escalonamento (integração)', { skip: banco.motivoPul
         assert.equal(r.alertasCriados, 2, 'um alerta para o dia -2 e outro para o dia -1');
         assert.equal(await alertasDo(p.id), 2);
         assert.equal(await pendentesDo(p.id), 0);
-        assert.equal(envio.mock.callCount(), 2 * destinatarios, 'um e-mail por alerta, não por movimento');
+        assert.equal(await emailsDoAlerta('alerta_novo', p.id), 2 * destinatarios, 'um e-mail por alerta, não por movimento');
 
         const { rows } = await pool.query('SELECT id FROM alertas WHERE processo_id = $1 ORDER BY id', [p.id]);
         assert.equal((await alertasModel.listMovimentos(rows[0].id)).length, 3);
@@ -206,13 +209,12 @@ describe('alertas: sync e escalonamento (integração)', { skip: banco.motivoPul
             await pool.query(`UPDATE alertas SET status = 'ciente', ciente_em = NOW() WHERE processo_id = $1`, [p.id]);
             return vencidos;
         });
-        const envio = mock.method(mailer, 'enviarEmail', async () => ({ ok: true }));
 
         const escalados = await escalarAlertasVencidos();
         const { rows } = await pool.query('SELECT status FROM alertas WHERE processo_id = $1', [p.id]);
         assert.equal(rows[0].status, 'ciente');
         assert.equal(escalados, 0);
-        assert.equal(envio.mock.callCount(), 0, 'nenhum e-mail de escalonamento deve sair');
+        assert.equal(await emailsDoAlerta('alerta_escalado', p.id), 0, 'nenhum e-mail de escalonamento deve sair');
     });
 
     test('alerta vencido sem ciência é escalado e notificado', async () => {
@@ -220,11 +222,10 @@ describe('alertas: sync e escalonamento (integração)', { skip: banco.motivoPul
         await aplicarDadosDaFonte(p, dadosFonte([movimento(JUNTADA, diasAtras(100))]), OPCOES);
         await aplicarDadosDaFonte(p, dadosFonte([movimento(INTIMACAO, diasAtras(1))]), OPCOES);
         await pool.query(`UPDATE alertas SET criado_em = NOW() - INTERVAL '10 days' WHERE processo_id = $1`, [p.id]);
-        const envio = mock.method(mailer, 'enviarEmail', async () => ({ ok: true }));
 
         assert.equal(await escalarAlertasVencidos(), 1);
         const { rows } = await pool.query('SELECT status FROM alertas WHERE processo_id = $1', [p.id]);
         assert.equal(rows[0].status, 'escalado');
-        assert.ok(envio.mock.callCount() >= 1);
+        assert.ok((await emailsDoAlerta('alerta_escalado', p.id)) >= 1);
     });
 });

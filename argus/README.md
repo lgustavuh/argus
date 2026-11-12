@@ -157,7 +157,7 @@ Menu **Configurações** (somente Admin TI):
 | **Geral** | Dias até escalar um alerta sem ciência (padrão 3); dias para considerar um processo parado; resumo diário da agenda por e-mail (liga/desliga, dias de antecedência); painel de status (chaves de segurança, DataJud, HTTPS, último backup). |
 | **Usuários** | Criar, desativar, mudar perfil, redefinir senha. Desativar ou mudar perfil derruba a sessão do usuário na hora. |
 | **Alertas** | Códigos TPU/CNJ que geram alerta e peso de urgência (1–5). Lista inicial conferida contra dados reais do TJMG. |
-| **E-mail** | Servidor SMTP, porta, usuário, senha (guardada cifrada), remetente, e-mail geral; liga/desliga o envio; botão de e-mail de teste. Com o e-mail desligado, os alertas continuam no sistema (contador vermelho no menu). |
+| **E-mail** | Servidor SMTP, porta, usuário, senha (guardada cifrada), remetente, e-mail geral; liga/desliga o envio; botão de e-mail de teste. Com o e-mail desligado, os alertas continuam no sistema (contador vermelho no menu). **Fila de e-mails:** alertas e avisos saem por uma fila a cada minuto; se o SMTP falhar, o Argus tenta de novo (até 6 vezes, de 5 min a 6 h) e o que não sair aparece como "falhou", com botão de reenviar. |
 | **Integração** | Fonte de dados (DataJud; MNI quando implementado), atualização automática liga/desliga, intervalo em horas, janela da carga inicial, resumo da última atualização, botão "Atualizar agora", dados do MNI (WSDL, consultante, senha cifrada, observações). |
 | **Auditoria** | Trilha de acessos e de todas as ações que alteram dados (quem, quando, IP). |
 

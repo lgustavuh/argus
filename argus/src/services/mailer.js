@@ -20,24 +20,41 @@ async function obterConfig() {
     };
 }
 
+// Reaproveita a conexao SMTP entre envios (a fila manda varios e-mails seguidos); se a configuracao
+// mudar na tela, um transporter novo e criado.
+let cache = { chave: null, transporter: null };
+
 function criarTransporter(cfg) {
+    const chave = JSON.stringify([cfg.host, cfg.porta, cfg.usuario, cfg.senha]);
+    if (cache.chave === chave) return cache.transporter;
+    if (cache.transporter) cache.transporter.close();
+    cache = { chave, transporter: novoTransporter(cfg) };
+    return cache.transporter;
+}
+
+function novoTransporter(cfg) {
     return nodemailer.createTransport({
+        pool: true,
+        maxConnections: 1,
         host: cfg.host,
         port: cfg.porta,
         secure: cfg.porta === 465, // 465 = SSL direto; 587/25 = STARTTLS quando o servidor oferece
         auth: cfg.usuario ? { user: cfg.usuario, pass: cfg.senha } : undefined,
-        connectionTimeout: 15000
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 30000
     });
 }
 
 /**
- * @returns {Promise<{ok: boolean, motivo?: string}>}
+ * Envio direto (usado pela fila de saida e pelo e-mail de teste). Para avisos, use services/outbox.
+ * @returns {Promise<{ok: boolean, motivo?: string, desativado?: boolean}>}
  */
 async function enviarEmail({ to, subject, html, text }, { ignorarAtivo = false } = {}) {
     const cfg = await obterConfig();
     if ((!cfg.ativo && !ignorarAtivo) || !cfg.host) {
         console.log(`[mailer] E-mail desativado — nao enviado (assunto: "${subject}", destinatario: ${to})`);
-        return { ok: false, motivo: 'E-mail desativado ou sem servidor SMTP configurado.' };
+        return { ok: false, desativado: true, motivo: 'E-mail desativado ou sem servidor SMTP configurado.' };
     }
     try {
         const endereco = cfg.remetente || cfg.usuario;

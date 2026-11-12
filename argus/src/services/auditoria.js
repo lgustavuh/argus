@@ -75,6 +75,7 @@ const ROTULOS_ACAO = {
     sync_manual: 'Disparou sincronização manual',
     config_alterada: 'Alterou configurações',
     email_teste: 'Enviou e-mail de teste',
+    email_reenviado: 'Reenviou e-mail que falhou',
     tpu_salvo: 'Salvou código TPU',
     tpu_removido: 'Removeu código TPU',
     usuario_criado: 'Criou usuário',

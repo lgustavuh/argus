@@ -655,3 +655,4 @@ td .etiquetas { margin-top: 4px; display: flex; }
 @media (max-width: 560px) { .coluna-rotulo { font-size: 0.6rem; } .coluna-rotulo .ano { display: none; } .colunas { gap: 2px; } }
 .abrir-tribunal { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin-bottom: var(--space-sm); }
 .movimentos-alerta { margin: 0 0 var(--space-md); padding-left: 20px; }
+.texto-alerta { color: var(--status-pendente); }

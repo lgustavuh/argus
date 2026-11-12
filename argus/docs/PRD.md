@@ -117,6 +117,7 @@ Encontrados na revisão de 11/11/2026. Severidade: 🔴 alta · 🟠 média · �
 
 **Status (12/11/2026):**
 - ✅ **BUG-02** corrigido — `movimentos.alerta_pendente` (migration 010); alerta e remoção da marca na mesma transação; reprocessamento no fim de cada sync e de hora em hora; e-mail não desfaz alerta. Coberto por `test/alertas.integracao.test.js`.
+- ✅ **BUG-03** corrigido com MEL-11 — alertas e avisos da agenda entram na fila `emails_saida` (migration 012), enviada a cada minuto fora do sync, com conexão SMTP reaproveitada. Coberto por `test/outbox.integracao.test.js`.
 - ✅ **BUG-04** corrigido — escalonamento só notifica se `marcarEscalado` de fato escalou. Coberto por teste.
 - ✅ **BUG-01** corrigido — `.gitignore` corrigido; dumps, `.env.bak` e `.claude/settings.local.json` removidos do índice **e de todo o histórico** (reescrita + force push em 12/11/2026, autorizada). Repositório privado: troca de segredos não foi necessária.
 - ✅ **BUG-14** corrigido — `npm audit fix` + `node-cron` 4.6: `npm audit` sem vulnerabilidades.
@@ -158,7 +159,7 @@ Encontrados na revisão de 11/11/2026. Severidade: 🔴 alta · 🟠 média · �
 - **MEL-08 Sugestão de data fatal** a partir do tipo de movimento + calendário de feriados forenses (sempre como sugestão editável, nunca automático).
 - **MEL-09 Escalonamento em dias úteis** (hoje conta dias corridos, inclusive fins de semana).
 - **MEL-10 Escalonamento para o responsável do processo primeiro**, depois para o procurador (hoje vai para o primeiro procurador por ordem alfabética).
-- **MEL-11 Outbox de e-mail com reenvio** e tela de "e-mails não entregues" (resolve BUG-03 e dá visibilidade).
+- ✅ **MEL-11 Outbox de e-mail com reenvio** (12/11/2026: até 6 tentativas com espera de 5 min a 6 h; "falhou" aparece em Configurações › E-mail e no status do sistema, com reenvio; descarta se o envio estiver desativado; enviados apagados após 90 dias) e tela de "e-mails não entregues" (resolve BUG-03 e dá visibilidade).
 - **MEL-12 Limite de login persistente** (tabela) para sobreviver a reinício do container.
 - **MEL-13 Alerta de "processo parado"** (sem movimentação há N dias) como notificação, não só no painel.
 - **MEL-14 Exportação** (CSV/PDF) de processos, alertas e agenda para relatórios à chefia.

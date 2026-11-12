@@ -3,6 +3,7 @@ const { sincronizar, syncEmAndamento } = require('../services/reconciliation');
 const { escalarAlertasVencidos, gerarAlertasPendentes } = require('../services/alertEngine');
 const { enviarResumosDiarios } = require('../services/agenda');
 const configuracoes = require('../services/configuracoes');
+const outbox = require('../services/outbox');
 
 /**
  * Um unico relogio, de hora em hora:
@@ -30,6 +31,15 @@ async function talvezSincronizar() {
 }
 
 function iniciarScheduler() {
+    // Fila de e-mails: a cada minuto, para o aviso sair logo depois de entrar na fila (PRD MEL-11).
+    cron.schedule('30 * * * * *', async () => {
+        try {
+            const r = await outbox.processar();
+            if (r.enviados || r.reagendados || r.falharam) console.log('[scheduler] E-mails:', JSON.stringify(r));
+        } catch (err) {
+            console.error('[scheduler] Falha ao processar a fila de e-mails:', err.message);
+        }
+    });
     cron.schedule('0 0 * * * *', async () => {
         try {
             // Alertas que falharam em um sync anterior nao esperam o proximo sync (PRD BUG-02).
@@ -58,7 +68,7 @@ function iniciarScheduler() {
             console.error('[scheduler] Falha na sincronizacao agendada:', err.message);
         }
     });
-    console.log('[scheduler] Relogio de hora em hora iniciado (escalonamento + resumo da agenda + sync conforme Configuracoes > Integracao).');
+    console.log('[scheduler] Relogio de hora em hora iniciado (escalonamento + resumo da agenda + sync conforme Configuracoes > Integracao); fila de e-mails a cada minuto.');
 }
 
 module.exports = { iniciarScheduler };
