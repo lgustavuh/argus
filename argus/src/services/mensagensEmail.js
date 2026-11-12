@@ -69,7 +69,7 @@ async function alertaEscalado(d, ap) {
         tipo: 'escalado',
         aparencia: ap,
         assunto: `Alerta ESCALADO — ${formatar(d.numero)}`,
-        titulo: `Alerta sem ciência há mais de ${d.dias} dia(s)`,
+        titulo: `Alerta sem ciência há mais de ${d.dias} dia(s) útil(eis)`,
         texto: 'Ninguém confirmou no Argus que viu este alerta dentro do prazo interno da Procuradoria, e ele foi escalado. Verifique no sistema do tribunal se há prazo correndo.',
         infos: [...infosProcesso(d), ['Alerta criado em', fmtDataHora(d.criadoEm)]],
         botao: { texto: 'Ver alerta no Argus', url: `${baseUrl()}/alertas/${d.alertaId}` },

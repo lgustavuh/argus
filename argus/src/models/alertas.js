@@ -159,14 +159,18 @@ async function marcarCiente(id, usuarioId) {
     return rows[0] || null;
 }
 
-async function listParaEscalonar(prazoDiasPadrao) {
+/**
+ * Alertas ainda sem ciencia, com o dia (Brasilia) em que foram criados. O corte por dias uteis
+ * (PRD MEL-09) e feito em services/alertEngine, que conhece o calendario.
+ */
+async function listParaEscalonar() {
     const { rows } = await pool.query(
-        `SELECT a.*, p.numero_processo, p.procurador_responsavel_id
+        `SELECT a.*, p.numero_processo, p.procurador_responsavel_id,
+                to_char(${DIA_SP('a.criado_em')}, 'YYYY-MM-DD') AS criado_dia
          FROM alertas a
          JOIN processos p ON p.id = a.processo_id
          WHERE a.status IN ('pendente', 'visualizado')
-           AND a.criado_em < NOW() - (COALESCE(a.prazo_dias_alerta, $1) || ' days')::interval`,
-        [prazoDiasPadrao]
+         ORDER BY a.id`
     );
     return rows;
 }

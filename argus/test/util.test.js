@@ -51,6 +51,20 @@ describe('util/datas', () => {
     });
 });
 
+describe('util/datas: dias úteis internos (MEL-09)', () => {
+    test('pula fim de semana e feriado', () => {
+        assert.equal(datas.somarDiasUteis('2026-11-13', 3), '2026-11-18'); // sexta + 3 (15/11 cai no domingo)
+        assert.equal(datas.somarDiasUteis('2026-11-19', 1), '2026-11-23'); // 20/11 Consciência Negra, depois fim de semana
+        assert.equal(datas.somarDiasUteis('2026-12-24', 1), '2026-12-28'); // Natal + fim de semana
+    });
+
+    test('recesso forense conta como dia útil interno (plantão continua)', () => {
+        assert.equal(datas.somarDiasUteis('2026-12-21', 1), '2026-12-22');
+        assert.equal(datas.ehDiaUtilInterno('2027-01-05'), true);
+        assert.equal(datas.ehDiaUtilInterno('2027-01-01'), false);
+    });
+});
+
 describe('util/fuso', () => {
     test('DataJud: hora local marcada como Z vira o instante UTC correto', () => {
         assert.equal(horaLocalSaoPauloParaUtc('2026-02-12T12:25:48.000Z'), '2026-02-12T15:25:48.000Z');

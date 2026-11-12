@@ -217,6 +217,42 @@ describe('alertas: sync e escalonamento (integração)', { skip: banco.motivoPul
         assert.equal(await emailsDoAlerta('alerta_escalado', p.id), 0, 'nenhum e-mail de escalonamento deve sair');
     });
 
+    test('MEL-09: escalonamento conta dias úteis (sexta + 3 dias úteis = escala só na quinta)', async () => {
+        const p = await novoProcesso();
+        await aplicarDadosDaFonte(p, dadosFonte([movimento(JUNTADA, diasAtras(100))]), OPCOES);
+        await aplicarDadosDaFonte(p, dadosFonte([movimento(INTIMACAO, diasAtras(1))]), OPCOES);
+        // Criado na sexta 13/11/2026 às 12h de Brasília; prazo 3 dias úteis -> vence na quarta 18/11.
+        await pool.query(`UPDATE alertas SET criado_em = '2026-11-13 15:00:00', prazo_dias_alerta = 3 WHERE processo_id = $1`, [p.id]);
+        const status = async () => (await pool.query('SELECT status FROM alertas WHERE processo_id = $1', [p.id])).rows[0].status;
+
+        await escalarAlertasVencidos({ hoje: '2026-11-18' });
+        assert.notEqual(await status(), 'escalado', 'no último dia do prazo ainda não escala');
+        await escalarAlertasVencidos({ hoje: '2026-11-19' });
+        assert.equal(await status(), 'escalado');
+    });
+
+    test('MEL-10: escalonamento vai para o responsável do processo e o(s) procurador(es), não para toda a equipe', async () => {
+        const responsavel = await usuariosModel.create({ nome: 'Advogado Responsável', email: 'resp@teste.local', senhaHash: 'x', papel: 'advogado' });
+        await usuariosModel.create({ nome: 'Assistente', email: 'assist@teste.local', senhaHash: 'x', papel: 'assistente_juridico' });
+        const p = await novoProcesso();
+        await pool.query('UPDATE processos SET procurador_responsavel_id = $1 WHERE id = $2', [responsavel.id, p.id]);
+        await aplicarDadosDaFonte(p, dadosFonte([movimento(JUNTADA, diasAtras(100))]), OPCOES);
+        await aplicarDadosDaFonte(p, dadosFonte([movimento(INTIMACAO, diasAtras(1))]), OPCOES);
+        await pool.query(`UPDATE alertas SET criado_em = NOW() - INTERVAL '15 days' WHERE processo_id = $1`, [p.id]);
+
+        assert.equal(await escalarAlertasVencidos(), 1);
+        const { rows } = await pool.query(
+            `SELECT e.para FROM emails_saida e JOIN alertas a ON e.referencia = 'alerta:' || a.id
+             WHERE e.tipo = 'alerta_escalado' AND a.processo_id = $1 ORDER BY e.para`, [p.id]);
+        const procuradores = (await usuariosModel.listAtivosPorPapeis(['procurador'])).map((u) => u.email);
+        assert.deepEqual(rows.map((r) => r.para), [...new Set(['resp@teste.local', ...procuradores])].sort());
+        assert.ok(!rows.some((r) => r.para === 'assist@teste.local'));
+
+        const { rows: [al] } = await pool.query('SELECT escalado_para FROM alertas WHERE processo_id = $1', [p.id]);
+        const primeiroProcurador = (await usuariosModel.listAtivosPorPapeis(['procurador']))[0];
+        assert.equal(al.escalado_para, primeiroProcurador.id, 'responsável advogado: destino registrado é o procurador');
+    });
+
     test('alerta vencido sem ciência é escalado e notificado', async () => {
         const p = await novoProcesso();
         await aplicarDadosDaFonte(p, dadosFonte([movimento(JUNTADA, diasAtras(100))]), OPCOES);

@@ -157,8 +157,8 @@ Encontrados na revisão de 11/11/2026. Severidade: 🔴 alta · 🟠 média · �
 ### 8.2 Produto
 - **MEL-07 Integração MNI/TJMG** assim que o credenciamento sair (avisos de citação/intimação → cadastro automático de processos).
 - **MEL-08 Sugestão de data fatal** a partir do tipo de movimento + calendário de feriados forenses (sempre como sugestão editável, nunca automático).
-- **MEL-09 Escalonamento em dias úteis** (hoje conta dias corridos, inclusive fins de semana).
-- **MEL-10 Escalonamento para o responsável do processo primeiro**, depois para o procurador (hoje vai para o primeiro procurador por ordem alfabética).
+- ✅ **MEL-09 Escalonamento em dias úteis** (12/11/2026: sábado, domingo e feriados não contam; o recesso conta, por causa dos plantões) (hoje conta dias corridos, inclusive fins de semana).
+- ✅ **MEL-10 Escalonamento para o responsável do processo primeiro** (12/11/2026: e-mail para o responsável + procurador(es), não para a equipe toda; destino registrado = responsável se for procurador), depois para o procurador (hoje vai para o primeiro procurador por ordem alfabética).
 - ✅ **MEL-11 Outbox de e-mail com reenvio** (12/11/2026: até 6 tentativas com espera de 5 min a 6 h; "falhou" aparece em Configurações › E-mail e no status do sistema, com reenvio; descarta se o envio estiver desativado; enviados apagados após 90 dias) e tela de "e-mails não entregues" (resolve BUG-03 e dá visibilidade).
 - **MEL-12 Limite de login persistente** (tabela) para sobreviver a reinício do container.
 - **MEL-13 Alerta de "processo parado"** (sem movimentação há N dias) como notificação, não só no painel.

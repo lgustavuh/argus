@@ -154,7 +154,7 @@ Menu **Configurações** (somente Admin TI):
 
 | Aba | O que tem |
 |---|---|
-| **Geral** | Dias até escalar um alerta sem ciência (padrão 3); dias para considerar um processo parado; resumo diário da agenda por e-mail (liga/desliga, dias de antecedência); painel de status (chaves de segurança, DataJud, HTTPS, último backup). |
+| **Geral** | Dias úteis até escalar um alerta sem ciência (padrão 3); dias para considerar um processo parado; resumo diário da agenda por e-mail (liga/desliga, dias de antecedência); painel de status (chaves de segurança, DataJud, HTTPS, último backup). |
 | **Usuários** | Criar, desativar, mudar perfil, redefinir senha. Desativar ou mudar perfil derruba a sessão do usuário na hora. |
 | **Alertas** | Códigos TPU/CNJ que geram alerta e peso de urgência (1–5). Lista inicial conferida contra dados reais do TJMG. |
 | **E-mail** | Servidor SMTP, porta, usuário, senha (guardada cifrada), remetente, e-mail geral; liga/desliga o envio; botão de e-mail de teste. Com o e-mail desligado, os alertas continuam no sistema (contador vermelho no menu). **Fila de e-mails:** alertas e avisos saem por uma fila a cada minuto; se o SMTP falhar, o Argus tenta de novo (até 6 vezes, de 5 min a 6 h) e o que não sair aparece como "falhou", com botão de reenviar. |
@@ -211,9 +211,10 @@ reverso com certificado (IIS com ARR, nginx ou Caddy) na frente da porta 3000 e 
 
 - **Contador vermelho no menu "Alertas"**: alertas sem ciência (pendentes, visualizados e escalados).
 - **Contador vermelho no menu "Agenda"**: compromissos com data passada que ninguém concluiu.
-- **Escalonamento**: verificado de hora em hora; alerta sem ciência após N dias vira "escalado", a
-  equipe é avisada de novo e a procuradora fica registrada como destino. Alerta escalado continua
-  aceitando ciência.
+- **Escalonamento**: verificado de hora em hora; alerta sem ciência no Argus depois de N **dias úteis**
+  (sábado, domingo e feriados não contam; o recesso forense conta) vira "escalado". Recebem novo e-mail
+  o **responsável pelo processo** e o(s) **procurador(es)**; fica registrado como destino o responsável,
+  se for procurador, ou o primeiro procurador ativo. Alerta escalado continua aceitando ciência.
 - **Atualização automática**: o relógio interno roda de hora em hora e dispara a consulta quando o
   intervalo configurado passou. Ligue/desligue em Configurações → Integração.
 - **Logs**: `docker compose logs -f app`.

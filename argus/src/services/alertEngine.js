@@ -6,7 +6,8 @@ const configuracoes = require('./configuracoes');
 const mensagens = require('./mensagensEmail');
 const mailer = require('./mailer');
 const outbox = require('./outbox');
-const { PAPEIS_RECEBEM_ALERTAS, PAPEL_ESCALONAMENTO } = require('../config/papeis');
+const { PAPEIS_RECEBEM_ALERTAS, PAPEIS_RESPONSAVEIS, PAPEL_ESCALONAMENTO } = require('../config/papeis');
+const { hojeSP, somarDiasUteis } = require('../util/datas');
 const { acessoNoTribunal } = require('./linkBuilder');
 
 async function destinatariosAlerta() {
@@ -101,45 +102,64 @@ async function gerarAlertasPendentes({ processoId = null, processo = null } = {}
 }
 
 /**
- * Alertas pendentes/visualizados sem ciencia ha mais tempo que o prazo interno viram "escalado":
- * o procurador e registrado como destino e toda a equipe e avisada de novo. Alerta escalado
- * continua aceitando ciencia.
+ * Quem recebe o escalonamento (PRD MEL-10): o responsavel pelo processo, que e quem deve agir, e
+ * o(s) procurador(es), que respondem pela Procuradoria. O restante da equipe ja recebeu o alerta
+ * novo e nao e avisado de novo. Fica registrado como destino o responsavel, se for procurador;
+ * senao o primeiro procurador ativo.
  */
-async function escalarAlertasVencidos() {
+async function destinosEscalonamento(processoResponsavelId) {
+    const procuradores = await usuariosModel.listAtivosPorPapeis([PAPEL_ESCALONAMENTO]);
+    const responsavel = processoResponsavelId ? await usuariosModel.findById(processoResponsavelId) : null;
+    const responsavelAtivo = responsavel && responsavel.ativo && PAPEIS_RESPONSAVEIS.includes(responsavel.papel) ? responsavel : null;
+    const destino = responsavelAtivo?.papel === PAPEL_ESCALONAMENTO ? responsavelAtivo : procuradores[0] || null;
+    const emails = [...new Set([responsavelAtivo?.email, ...procuradores.map((p) => p.email)].filter(Boolean))];
+    // Sem procurador nem responsavel ativo: ninguem pode ficar sem saber — vai para a equipe toda.
+    return { destino, emails: emails.length ? emails : await destinatariosAlerta() };
+}
+
+/**
+ * Alertas pendentes/visualizados sem ciencia depois de N dias UTEIS (PRD MEL-09; sabado, domingo
+ * e feriados nao contam) viram "escalado" e o responsavel + procurador(es) sao avisados. Escala
+ * quando "hoje" passa do N-esimo dia util apos o dia de criacao. Alerta escalado continua
+ * aceitando ciencia.
+ */
+async function escalarAlertasVencidos({ hoje = hojeSP() } = {}) {
     const prazoDiasPadrao = await configuracoes.lerNumero('geral.dias_escalonamento');
-    const vencidos = await alertasModel.listParaEscalonar(prazoDiasPadrao);
+    const vencidos = (await alertasModel.listParaEscalonar()).filter(
+        (a) => somarDiasUteis(a.criado_dia, a.prazo_dias_alerta || prazoDiasPadrao) < hoje
+    );
     if (!vencidos.length) return 0;
 
-    const procuradores = await usuariosModel.listAtivosPorPapeis([PAPEL_ESCALONAMENTO]);
     const aparencia = await mensagens.aparencia();
 
     let escalados = 0;
     for (const vencido of vencidos) {
+        const { destino, emails } = await destinosEscalonamento(vencido.procurador_responsavel_id);
         // null = alguem deu ciencia entre a consulta e agora: nao escala nem avisa (PRD BUG-04).
-        const marcado = await alertasModel.marcarEscalado(vencido.id, procuradores[0]?.id || null);
+        const marcado = await alertasModel.marcarEscalado(vencido.id, destino?.id || null);
         if (!marcado) continue;
         escalados += 1;
         try {
             const a = await alertasModel.findById(vencido.id);
-            await enviarParaEquipe(
-                await mensagens.alertaEscalado(
-                    {
-                        alertaId: a.id,
-                        numero: a.numero_processo,
-                        movimento: a.movimento_nome || 'Movimento sem descrição',
-                        dataMovimento: a.movimento_data_hora,
-                        classe: a.classe_nome,
-                        orgao: a.orgao_julgador,
-                        tribunal: a.tribunal,
-                        responsavel: a.procurador_nome,
-                        acesso: acessoNoTribunal(a),
-                        criadoEm: a.criado_em,
-                        dias: a.prazo_dias_alerta || prazoDiasPadrao
-                    },
-                    aparencia
-                ),
-                { tipo: 'alerta_escalado', referencia: `alerta:${a.id}` }
+            const mensagem = await mensagens.alertaEscalado(
+                {
+                    alertaId: a.id,
+                    numero: a.numero_processo,
+                    movimento: a.movimento_nome || 'Movimento sem descrição',
+                    dataMovimento: a.movimento_data_hora,
+                    classe: a.classe_nome,
+                    orgao: a.orgao_julgador,
+                    tribunal: a.tribunal,
+                    responsavel: a.procurador_nome,
+                    acesso: acessoNoTribunal(a),
+                    criadoEm: a.criado_em,
+                    dias: a.prazo_dias_alerta || prazoDiasPadrao
+                },
+                aparencia
             );
+            for (const to of emails) {
+                await outbox.enfileirar({ to, ...mensagem }, { tipo: 'alerta_escalado', referencia: `alerta:${a.id}` });
+            }
         } catch (err) {
             console.error(`[alertas] Alerta ${vencido.id} escalado, mas a notificacao por e-mail falhou:`, err.message);
         }
