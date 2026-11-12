@@ -4,6 +4,7 @@ const configuracoes = require('./configuracoes');
 const mensagens = require('./mensagensEmail');
 const outbox = require('./outbox');
 const { PAPEL_ESCALONAMENTO } = require('../config/papeis');
+const mailer = require('./mailer');
 const { hojeSP, somarDias, diaDaSemana } = require('../util/datas');
 
 const HORA_RESUMO = 7;
@@ -42,7 +43,15 @@ async function enviarResumosDiarios({ agora = new Date(), forcar = false } = {})
     const itens = await compromissosModel.listAbertosAte(somarDias(hoje, dias));
     if (!itens.length) return 0;
 
-    const procuradores = await usuariosModel.listAtivosPorPapeis([PAPEL_ESCALONAMENTO]);
+    // Compromisso sem responsavel vai para o(s) procurador(es); sem procurador ativo, para o e-mail
+    // geral da Procuradoria ou, na falta dele, para os admins — nunca fica sem destino (PRD BUG-13).
+    let semResponsavelPara = await usuariosModel.listAtivosPorPapeis([PAPEL_ESCALONAMENTO]);
+    if (!semResponsavelPara.length) {
+        const geral = await mailer.emailFallback();
+        semResponsavelPara = geral
+            ? [{ id: 'geral', nome: 'Procuradoria', email: geral }]
+            : await usuariosModel.listAtivosPorPapeis(['admin']);
+    }
     const ativos = new Map((await usuariosModel.listAtivos()).map((u) => [u.id, u]));
     const porPessoa = new Map();
     const juntar = (usuario, c) => {
@@ -52,7 +61,7 @@ async function enviarResumosDiarios({ agora = new Date(), forcar = false } = {})
     for (const c of itens) {
         const responsavel = c.responsavel_id && ativos.get(c.responsavel_id);
         if (responsavel) juntar(responsavel, c);
-        else procuradores.forEach((p) => juntar(p, c));
+        else semResponsavelPara.forEach((p) => juntar(p, c));
     }
 
     let enviados = 0;

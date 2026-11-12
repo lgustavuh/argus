@@ -229,12 +229,13 @@ POST  /api/auth/login
 GET   /api/processos?busca=&situacao=&tribunal=&responsavelId=&pagina=&porPagina=
 GET   /api/processos/:id                 (com movimentos)
 POST  /api/processos                     { "numeros": ["..."] } ou { "texto": "lista livre" }
-PATCH /api/processos/:id                 { responsavelId?, observacao?, ativo? }
+PATCH /api/processos/:id                 { responsavelId?, observacao?, ativo? }  (responsável: procurador/advogado ativo)
 GET   /api/alertas?status=abertos|pendente|visualizado|escalado|ciente
 GET   /api/alertas/:id
 PATCH /api/alertas/:id/visualizar
-PATCH /api/alertas/:id/ciencia
-POST  /api/sync/run
+PATCH /api/alertas/:id/ciencia           (ciência interna do Argus, não no tribunal)
+POST  /api/sync/run                      → 202; acompanhe em GET /api/sync/status
+GET   /api/sync/status
 GET   /api/codigos-tpu        POST /api/codigos-tpu   (admin)
 GET   /api/usuarios           POST /api/usuarios      (admin)
 ```

@@ -3,6 +3,8 @@ const { buildQueryPorNumeros } = require('./queries');
 const BASE_URL = 'https://api-publica.datajud.cnj.jus.br';
 const MAX_RETRIES = 5;
 const TAMANHO_LOTE = 100;
+// Sem limite explicito, cada tentativa poderia esperar os 300 s padrao do undici (PRD BUG-12).
+const TIMEOUT_MS = 30000;
 
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -17,7 +19,8 @@ async function postComRetry(url, body, apiKey, tentativa = 0) {
                 Authorization: `APIKey ${apiKey}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(TIMEOUT_MS)
         });
     } catch (err) {
         // Falha de rede (timeout, conexao resetada, DNS) — nao e erro da API, vale retry.

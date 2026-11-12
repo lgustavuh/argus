@@ -1,17 +1,16 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const usuariosModel = require('../../models/usuarios');
 const auditoria = require('../../services/auditoria');
+const { verificarCredenciais } = require('../../services/autenticacao');
 const { definirCookieSessao, limparCookieSessao } = require('../../middleware/auth');
 const limiteLogin = require('../../middleware/limiteLogin');
 const { validarSenha } = require('../../util/senha');
 const { a } = require('../../util/http');
 
 const router = express.Router();
-
-// Hash real de uma senha descartavel: usado para comparar quando o e-mail nao existe.
-const HASH_FICTICIO = bcrypt.hashSync('usuario-inexistente', 12);
 
 // Primeiro acesso: sem nenhum usuario cadastrado, so a tela de setup cria o admin inicial —
 // nenhuma credencial de admin fica salva em .env.
@@ -31,12 +30,13 @@ router.post('/setup', a(async (req, res) => {
     if (erroSenha) return res.status(400).render('setup', { erro: erroSenha });
     if (senha !== confirmarSenha) return res.status(400).render('setup', { erro: 'As senhas não coincidem.' });
 
-    const usuario = await usuariosModel.create({
+    const usuario = await usuariosModel.criarPrimeiroAdmin({
         nome: nome.trim(),
         email: email.toLowerCase().trim(),
-        senhaHash: await bcrypt.hash(senha, 12),
-        papel: 'admin'
+        senhaHash: await bcrypt.hash(senha, 12)
     });
+    // Outra requisicao criou o admin primeiro (PRD BUG-11).
+    if (!usuario) return res.redirect('/login');
     await auditoria.registrar(req, 'setup_admin', { entidade: 'usuario', entidadeId: usuario.id, usuario });
     definirCookieSessao(res, usuario);
     res.redirect('/painel');
@@ -59,11 +59,8 @@ router.post('/login', a(async (req, res) => {
         });
     }
 
-    const usuario = email ? await usuariosModel.findByEmail(email) : null;
-    // Compara mesmo sem usuario, para o tempo de resposta nao revelar se o e-mail existe.
-    const senhaOk = await bcrypt.compare(senha, usuario?.senha_hash || HASH_FICTICIO);
-
-    if (!usuario || !usuario.ativo || !senhaOk) {
+    const { usuario, valido } = await verificarCredenciais(email, senha);
+    if (!valido) {
         limiteLogin.registrarFalha(req, email);
         await auditoria.registrar(req, 'login_falha', { detalhes: { email }, usuario: usuario || null });
         return res.status(401).render('login', { erro: 'E-mail ou senha inválidos.' });
@@ -76,9 +73,27 @@ router.post('/login', a(async (req, res) => {
     res.redirect(usuario.deve_trocar_senha ? '/minha-conta?trocar=1' : '/painel');
 }));
 
-router.get('/logout', (req, res) => {
+// Logout so por POST (um link/imagem de outro site nao derruba a sessao) e invalidando o token no
+// banco: um token copiado antes do logout deixa de valer (PRD BUG-10).
+router.post('/logout', a(async (req, res) => {
+    const token = req.cookies?.token;
+    if (token) {
+        try {
+            const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+            const usuario = await usuariosModel.findSessao(payload.id);
+            if (usuario) {
+                await usuariosModel.encerrarSessoes(usuario.id);
+                await auditoria.registrar(req, 'logout', { entidade: 'usuario', entidadeId: usuario.id, usuario });
+            }
+        } catch (err) {
+            // token invalido/expirado: basta limpar o cookie
+        }
+    }
     limparCookieSessao(res);
     res.redirect('/login');
-});
+}));
+
+// Endereco antigo (favoritos): nao faz logout por GET, so leva para o sistema.
+router.get('/logout', (req, res) => res.redirect('/painel'));
 
 module.exports = router;

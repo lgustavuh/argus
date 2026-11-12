@@ -40,6 +40,49 @@ async function existeAlgum() {
     return rows.length > 0;
 }
 
+/**
+ * Cria o admin inicial so se ainda nao houver usuario nenhum (PRD BUG-11). O advisory lock
+ * serializa requisicoes simultaneas ao /setup: a segunda encontra o primeiro admin e desiste.
+ * @returns {Promise<object|null>} o admin criado, ou null se ja existia usuario
+ */
+async function criarPrimeiroAdmin({ nome, email, senhaHash }) {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        await client.query(`SELECT pg_advisory_xact_lock(hashtext('argus:setup'))`);
+        const { rows: existentes } = await client.query('SELECT 1 FROM usuarios LIMIT 1');
+        if (existentes.length) {
+            await client.query('ROLLBACK');
+            return null;
+        }
+        const { rows } = await client.query(
+            `INSERT INTO usuarios (nome, email, senha_hash, papel) VALUES ($1, $2, $3, 'admin') RETURNING ${CAMPOS_PUBLICOS}`,
+            [nome, email, senhaHash]
+        );
+        await client.query('COMMIT');
+        return rows[0];
+    } catch (err) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+/** Usuario ativo com um dos papeis dados (ex.: quem pode ser responsavel), ou null. */
+async function findAtivoComPapel(id, papeis) {
+    const { rows } = await pool.query(
+        `SELECT ${CAMPOS_PUBLICOS} FROM usuarios WHERE id = $1 AND ativo = TRUE AND papel = ANY($2)`,
+        [id, papeis]
+    );
+    return rows[0] || null;
+}
+
+/** Logout: invalida todos os tokens ja emitidos para o usuario (PRD BUG-10). */
+async function encerrarSessoes(id) {
+    await pool.query('UPDATE usuarios SET sessao_versao = sessao_versao + 1 WHERE id = $1', [id]);
+}
+
 async function create({ nome, email, senhaHash, papel = 'procurador', deveTrocarSenha = false }) {
     const { rows } = await pool.query(
         `INSERT INTO usuarios (nome, email, senha_hash, papel, deve_trocar_senha)
@@ -87,6 +130,9 @@ module.exports = {
     listAll,
     listAtivosPorPapeis,
     existeAlgum,
+    criarPrimeiroAdmin,
+    findAtivoComPapel,
+    encerrarSessoes,
     create,
     setAtivo,
     setPapel,

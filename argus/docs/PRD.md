@@ -118,6 +118,13 @@ Encontrados na revisão de 11/11/2026. Severidade: 🔴 alta · 🟠 média · �
 **Status (12/11/2026):**
 - ✅ **BUG-02** corrigido — `movimentos.alerta_pendente` (migration 010); alerta e remoção da marca na mesma transação; reprocessamento no fim de cada sync e de hora em hora; e-mail não desfaz alerta. Coberto por `test/alertas.integracao.test.js`.
 - ✅ **BUG-03** corrigido com MEL-11 — alertas e avisos da agenda entram na fila `emails_saida` (migration 012), enviada a cada minuto fora do sync, com conexão SMTP reaproveitada. Coberto por `test/outbox.integracao.test.js`.
+- ✅ **BUG-05 a BUG-13** corrigidos em 12/11/2026 — login da tela e da API pelo mesmo serviço com
+  hash fictício (`services/autenticacao`); responsável validado (procurador/advogado ativo, 400 se não);
+  `:id(\d+)` na API; 409 só para e-mail repetido; sync pela API em segundo plano (202) +
+  `GET /api/sync/status`; logout por POST invalidando o token (`sessao_versao`); `/setup` com
+  advisory lock; timeout de 30 s por chamada ao DataJud; resumo da agenda sem procurador vai para o
+  e-mail geral ou para os admins. Cobertos por `test/api.integracao.test.js` (BUG-12: só o timeout,
+  sem teste de rede).
 - ✅ **BUG-04** corrigido — escalonamento só notifica se `marcarEscalado` de fato escalou. Coberto por teste.
 - ✅ **BUG-01** corrigido — `.gitignore` corrigido; dumps, `.env.bak` e `.claude/settings.local.json` removidos do índice **e de todo o histórico** (reescrita + force push em 12/11/2026, autorizada). Repositório privado: troca de segredos não foi necessária.
 - ✅ **BUG-14** corrigido — `npm audit fix` + `node-cron` 4.6: `npm audit` sem vulnerabilidades.

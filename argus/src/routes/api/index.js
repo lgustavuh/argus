@@ -9,9 +9,11 @@ const codigosTpuModel = require('../../models/codigosTpu');
 const auditoria = require('../../services/auditoria');
 const { cadastrar } = require('../../services/cadastroProcessos');
 const { sincronizar, syncEmAndamento } = require('../../services/reconciliation');
+const { verificarCredenciais } = require('../../services/autenticacao');
+const { statusSync } = require('../web/painel');
 const { requireAuth, requirePermissao, gerarToken } = require('../../middleware/auth');
 const limiteLogin = require('../../middleware/limiteLogin');
-const { papelValido } = require('../../config/papeis');
+const { papelValido, PAPEIS_RESPONSAVEIS } = require('../../config/papeis');
 const { validarSenha } = require('../../util/senha');
 const { lerPaginacao } = require('../../util/paginacao');
 const { a } = require('../../util/http');
@@ -28,9 +30,9 @@ router.post('/auth/login', a(async (req, res) => {
     const bloqueio = limiteLogin.minutosBloqueado(req, email);
     if (bloqueio) return res.status(429).json({ erro: `Muitas tentativas. Tente em ${bloqueio} minuto(s).` });
 
-    const usuario = email ? await usuariosModel.findByEmail(email) : null;
-    const senhaOk = usuario ? await bcrypt.compare(senha, usuario.senha_hash) : false;
-    if (!usuario || !usuario.ativo || !senhaOk) {
+    // Mesmo servico da tela: compara a senha mesmo sem usuario (tempo constante, PRD BUG-05).
+    const { usuario, valido } = await verificarCredenciais(email, senha);
+    if (!valido) {
         limiteLogin.registrarFalha(req, email);
         await auditoria.registrar(req, 'login_falha', { detalhes: { email, via: 'api' }, usuario: usuario || null });
         return res.status(401).json({ erro: 'Credenciais invalidas' });
@@ -62,7 +64,7 @@ router.get('/processos', a(async (req, res) => {
     res.json({ total, pagina: pag.pagina, processos });
 }));
 
-router.get('/processos/:id', a(async (req, res) => {
+router.get('/processos/:id(\\d+)', a(async (req, res) => {
     const processo = await processosModel.findById(req.params.id);
     if (!processo) return res.status(404).json({ erro: 'Processo nao encontrado' });
     res.json({ ...processo, movimentos: await movimentosModel.listByProcesso(processo.id) });
@@ -81,11 +83,15 @@ router.post('/processos', requirePermissao('gerenciarProcessos'), a(async (req, 
     res.status(201).json(resultado);
 }));
 
-router.patch('/processos/:id', requirePermissao('gerenciarProcessos'), a(async (req, res) => {
+router.patch('/processos/:id(\\d+)', requirePermissao('gerenciarProcessos'), a(async (req, res) => {
     let processo = await processosModel.findById(req.params.id);
     if (!processo) return res.status(404).json({ erro: 'Processo nao encontrado' });
     if ('responsavelId' in req.body) {
-        processo = await processosModel.setProcuradorResponsavel(processo.id, req.body.responsavelId || null);
+        const id = req.body.responsavelId;
+        if (id !== null && id !== '' && !(/^\d+$/.test(String(id)) && (await usuariosModel.findAtivoComPapel(Number(id), PAPEIS_RESPONSAVEIS)))) {
+            return res.status(400).json({ erro: 'Responsável inválido: informe um procurador ou advogado ativo (ou null para remover).' });
+        }
+        processo = await processosModel.setProcuradorResponsavel(processo.id, id ? Number(id) : null);
         await auditoria.registrar(req, 'processo_responsavel', { entidade: 'processo', entidadeId: processo.id });
     }
     if ('observacao' in req.body) {
@@ -106,20 +112,20 @@ router.get('/alertas', a(async (req, res) => {
     res.json({ total, pagina: pag.pagina, alertas });
 }));
 
-router.get('/alertas/:id', a(async (req, res) => {
+router.get('/alertas/:id(\\d+)', a(async (req, res) => {
     const alerta = await alertasModel.findById(req.params.id);
     if (!alerta) return res.status(404).json({ erro: 'Alerta nao encontrado' });
     res.json(alerta);
 }));
 
-router.patch('/alertas/:id/visualizar', requirePermissao('darCiencia'), a(async (req, res) => {
+router.patch('/alertas/:id(\\d+)/visualizar', requirePermissao('darCiencia'), a(async (req, res) => {
     const alerta = await alertasModel.marcarVisualizado(req.params.id, req.usuario.id);
     if (!alerta) return res.status(409).json({ erro: 'Alerta nao encontrado ou ja tratado' });
     await auditoria.registrar(req, 'alerta_visualizado', { entidade: 'alerta', entidadeId: alerta.id });
     res.json(alerta);
 }));
 
-router.patch('/alertas/:id/ciencia', requirePermissao('darCiencia'), a(async (req, res) => {
+router.patch('/alertas/:id(\\d+)/ciencia', requirePermissao('darCiencia'), a(async (req, res) => {
     const alerta = await alertasModel.marcarCiente(req.params.id, req.usuario.id);
     if (!alerta) return res.status(409).json({ erro: 'Alerta nao encontrado ou ja com ciencia' });
     await auditoria.registrar(req, 'alerta_ciencia', { entidade: 'alerta', entidadeId: alerta.id });
@@ -127,15 +133,16 @@ router.patch('/alertas/:id/ciencia', requirePermissao('darCiencia'), a(async (re
 }));
 
 // ---------- Sync ----------
+// Em segundo plano, como na tela: o sync pode levar minutos e proxies cortariam a requisicao
+// (PRD BUG-09). O andamento e o resultado ficam em GET /api/sync/status.
 router.post('/sync/run', requirePermissao('rodarSync'), a(async (req, res) => {
     if (syncEmAndamento()) return res.status(409).json({ erro: 'Ja existe uma sincronizacao em andamento' });
     await auditoria.registrar(req, 'sync_manual', { detalhes: { via: 'api' } });
-    try {
-        res.json(await sincronizar({ origem: `api:${req.usuario.nome}` }));
-    } catch (err) {
-        res.status(503).json({ erro: err.message });
-    }
+    sincronizar({ origem: `api:${req.usuario.nome}` }).catch((err) => console.error('[sync api] Falha:', err.message));
+    res.status(202).json({ iniciado: true, status: '/api/sync/status' });
 }));
+
+router.get('/sync/status', a(async (req, res) => res.json(await statusSync())));
 
 // ---------- Codigos TPU ----------
 router.get('/codigos-tpu', a(async (req, res) => res.json(await codigosTpuModel.listAll())));
@@ -167,7 +174,9 @@ router.post('/usuarios', requirePermissao('configurar'), a(async (req, res) => {
         await auditoria.registrar(req, 'usuario_criado', { entidade: 'usuario', entidadeId: criado.id, detalhes: { via: 'api' } });
         res.status(201).json(criado);
     } catch (err) {
-        res.status(409).json({ erro: 'E-mail ja cadastrado' });
+        // So violacao de unicidade e "e-mail repetido"; o resto vai para o handler de erro (PRD BUG-08).
+        if (err.code === '23505') return res.status(409).json({ erro: 'E-mail ja cadastrado' });
+        throw err;
     }
 }));
 

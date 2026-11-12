@@ -123,7 +123,12 @@ router.get('/:id', a(async (req, res) => {
 }));
 
 router.post('/:id/responsavel', requirePermissao('gerenciarProcessos'), a(async (req, res) => {
-    const processo = await processosModel.setProcuradorResponsavel(req.params.id, req.body.responsavelId || null);
+    const id = req.body.responsavelId || '';
+    // So procurador/advogado ativo (PRD BUG-06); vazio remove o responsavel.
+    if (id && !(/^\d+$/.test(id) && (await usuariosModel.findAtivoComPapel(Number(id), PAPEIS_RESPONSAVEIS)))) {
+        return res.redirect(comMsg(`/processos/${req.params.id}`, 'Responsável inválido: escolha um procurador ou advogado ativo.'));
+    }
+    const processo = await processosModel.setProcuradorResponsavel(req.params.id, id ? Number(id) : null);
     if (processo) {
         await auditoria.registrar(req, 'processo_responsavel', {
             entidade: 'processo',

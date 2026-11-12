@@ -656,3 +656,7 @@ td .etiquetas { margin-top: 4px; display: flex; }
 .abrir-tribunal { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin-bottom: var(--space-sm); }
 .movimentos-alerta { margin: 0 0 var(--space-md); padding-left: 20px; }
 .texto-alerta { color: var(--status-pendente); }
+/* "Sair" e um formulario POST (PRD BUG-10) com cara de item do menu. */
+.form-sair { margin: 0; }
+.form-sair button.nav-item { width: 100%; background: transparent; border: 0; font: inherit; text-align: left; cursor: pointer; box-shadow: none; }
+.form-sair button.nav-item:hover { background: var(--sidebar-bg-raised); color: var(--sidebar-text-active); }
