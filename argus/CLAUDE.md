@@ -9,7 +9,7 @@ Minas/MG. Em **produção** com dados reais — trate cada mudança como mudanç
 
 ## Stack
 
-Node 20 · Express 4 · EJS (server-rendered) · PostgreSQL 16 (`pg`, SQL puro, sem ORM) · node-cron ·
+Node 22 (imagem `node:22-alpine`, usuário `node`) · Express 4 · EJS (server-rendered) · PostgreSQL 16 (`pg`, SQL puro, sem ORM) · node-cron ·
 nodemailer · JWT em cookie httpOnly · Docker Compose (app + postgres + backup). JS puro (CommonJS), sem build.
 
 ## Comandos
@@ -23,6 +23,7 @@ node src/scripts/criarAdmin.js        # cria/recupera admin pela linha de comand
 node src/scripts/configurarSegredos.js
 docker compose up -d --build          # stack completa
 docker compose logs -f app
+curl -s http://localhost:3000/healthz             # {"ok":true} = app + banco no ar
 for f in $(git ls-files 'src/*.js'); do node --check "$f"; done   # checagem de sintaxe
 npm audit --omit=dev
 ```
@@ -110,6 +111,15 @@ Fluxo central: `syncScheduler` → `reconciliation.sincronizar` → `fonte.consu
   pelo projeto). Force push e reescrita de histórico continuam exigindo confirmação.
 - A raiz do repositório git é a pasta acima (`Argus/`); o código fica em `argus/`.
 - Ao corrigir um item do PRD, cite o ID (`BUG-02`, `MEL-01`) no commit e atualize a tabela em `docs/PRD.md`.
+
+## Produção (nesta máquina)
+
+- Stack Docker Compose do projeto `argus`, banco no volume `argus_argus_pgdata` (nunca `docker compose down -v`).
+- Antes de `docker compose up -d --build`: backup manual
+  `docker exec argus-postgres-1 pg_dump -U argus -Fc argus > backups/argus_antes_deploy_AAAAMMDD_HHMM.dump`.
+- Depois: conferir `docker compose logs app` (migrations), `/healthz` e `docker compose logs backup`.
+- Se a pasta do projeto mudar de lugar, recriar a stack a partir da pasta nova (bind mounts de `backups/` e
+  `documentos/` usam caminho absoluto — PRD BUG-15).
 
 ## Antes de concluir uma tarefa
 

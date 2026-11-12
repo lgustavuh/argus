@@ -113,8 +113,9 @@ Encontrados na revisão de 11/11/2026. Severidade: 🔴 alta · 🟠 média · �
 **Status (12/11/2026):**
 - ✅ **BUG-02** corrigido — `movimentos.alerta_pendente` (migration 010); alerta e remoção da marca na mesma transação; reprocessamento no fim de cada sync e de hora em hora; e-mail não desfaz alerta. Coberto por `test/alertas.integracao.test.js`.
 - ✅ **BUG-04** corrigido — escalonamento só notifica se `marcarEscalado` de fato escalou. Coberto por teste.
-- 🟡 **BUG-01** parcial — `.gitignore` corrigido e arquivos removidos do índice (continuam no disco). **Pendente:** os arquivos seguem no histórico do git (commit `e2acdb2`); reescrever histórico + force push e trocar segredos dependem de confirmação.
-- 🟡 **BUG-14** parcial — `npm audit fix` resolveu `body-parser` (alta) e `nodemailer`. Resta `uuid` (moderada) via `node-cron` 3: o node-cron só usa `uuid.v4`, não afetado pela falha (v3/v5/v6 com `buf`); a correção exige `node-cron` 4 (mudança incompatível) — tratar junto com MEL-04.
+- ✅ **BUG-01** corrigido — `.gitignore` corrigido; dumps, `.env.bak` e `.claude/settings.local.json` removidos do índice **e de todo o histórico** (reescrita + force push em 12/11/2026, autorizada). Repositório privado: troca de segredos não foi necessária.
+- ✅ **BUG-14** corrigido — `npm audit fix` + `node-cron` 4.6: `npm audit` sem vulnerabilidades.
+- ✅ **BUG-15** corrigido (encontrado em 12/11/2026) — **o backup diário não estava sendo gravado.** A pasta do projeto foi movida de `Desktop\Sistema Juridico\argus` para `Desktop\Argus\argus` sem recriar os containers; os bind mounts de `backups/` e `documentos/` apontavam para um caminho inexistente. Último backup real: 11/11/2026 14:48 (nenhum documento anexado foi perdido — tabela vazia). Resolvido recriando a stack a partir da pasta nova. **Ao mover a pasta do projeto, sempre rodar `docker compose up -d` na pasta nova.**
 
 | ID | Sev. | Problema | Onde | Correção proposta |
 |---|:-:|---|---|---|
@@ -142,6 +143,7 @@ Encontrados na revisão de 11/11/2026. Severidade: 🔴 alta · 🟠 média · �
   unidade em `util/cnj`, `util/datas`, `util/fuso`, `hashDedup`/`consolidar`; integração em `aplicarDadosDaFonte` (carga inicial, repetições no mesmo segundo, falha de tribunal), escalonamento e permissões por perfil. Meta: 80% nas regras de negócio.
 - **MEL-02 CI** (GitHub Actions): `npm ci`, `node --check`, testes com Postgres de serviço, `npm audit --omit=dev`.
 - **MEL-03 Lint/format** (ESLint + Prettier) com as regras já seguidas no código (4 espaços, aspas simples).
+- ✅ **MEL-04 / MEL-05** feitos em 12/11/2026 (Node 22, `npm ci`, `USER node`, `HEALTHCHECK` em `/healthz`, node-cron 4). Texto original:
 - **MEL-04 Dockerfile:** `npm ci --omit=dev`, `USER node`, `HEALTHCHECK`, `NODE_ENV=production`; atualizar a imagem de `node:20` (fim de suporte em abr/2026) para `node:22`/`node:24` LTS e o `node-cron` para 4.x (fecha BUG-14).
 - **MEL-05 Endpoint `/healthz`** (app + banco) para o healthcheck e monitoramento.
 - **MEL-06 Commits pequenos** por funcionalidade, mensagens no padrão Conventional Commits.
