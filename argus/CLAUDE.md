@@ -42,7 +42,9 @@ docker stop argus-test-db
 
 Sem `TEST_DATABASE_URL` só os unitários rodam. O helper `test/helpers/banco.js` recusa bancos que
 não terminem em `_test` (o reset apaga o schema) e precisa ser requerido antes de qualquer módulo de `src/`.
-Toda correção de bug ganha um teste que falharia sem ela.
+Toda correção de bug ganha um teste que falharia sem ela. Os arquivos rodam em série
+(`--test-concurrency=1`): os de integração compartilham o mesmo banco de teste.
+A CI (`../.github/workflows/ci.yml`) roda sintaxe, testes com Postgres e `npm audit` a cada push na `main`.
 
 ## Estrutura
 

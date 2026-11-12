@@ -1,0 +1,59 @@
+# CI do Argus (PRD MEL-02): sintaxe, testes (com Postgres descartavel) e auditoria de dependencias.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: argus
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: argus
+          POSTGRES_PASSWORD: teste
+          POSTGRES_DB: argus_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U argus"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Banco descartavel do proprio job; o helper recusa nomes que nao terminem em _test.
+      TEST_DATABASE_URL: postgres://argus:teste@localhost:5432/argus_test
+      TZ: UTC
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: argus/package-lock.json
+
+      - name: Dependências
+        run: npm ci
+
+      - name: Sintaxe
+        run: for f in $(git ls-files 'src/*.js' 'test/*.js' 'public/js/*.js'); do node --check "$f"; done
+
+      - name: Testes (unitários + integração)
+        run: npm test
+
+      - name: Auditoria de dependências (produção)
+        run: npm audit --omit=dev --audit-level=high

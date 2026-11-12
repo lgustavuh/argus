@@ -154,7 +154,7 @@ Encontrados na revisão de 11/11/2026. Severidade: 🔴 alta · 🟠 média · �
 ### 8.1 Qualidade e engenharia
 - **MEL-01 Testes automatizados (prioridade máxima).** 🟡 Iniciado em 12/11/2026: `npm test` (`node:test`), unitários de `util/cnj`, `util/datas`, `util/fuso` e integração do sync/alertas/escalonamento com Postgres descartável (`TEST_DATABASE_URL`). Falta: rotas/permissões, agenda, documentos. Começar por `node:test` + `supertest`, sem dependência nova pesada:
   unidade em `util/cnj`, `util/datas`, `util/fuso`, `hashDedup`/`consolidar`; integração em `aplicarDadosDaFonte` (carga inicial, repetições no mesmo segundo, falha de tribunal), escalonamento e permissões por perfil. Meta: 80% nas regras de negócio.
-- **MEL-02 CI** (GitHub Actions): `npm ci`, `node --check`, testes com Postgres de serviço, `npm audit --omit=dev`.
+- ✅ **MEL-02 CI** (12/11/2026: `.github/workflows/ci.yml` na raiz do repositório) (GitHub Actions): `npm ci`, `node --check`, testes com Postgres de serviço, `npm audit --omit=dev`.
 - **MEL-03 Lint/format** (ESLint + Prettier) com as regras já seguidas no código (4 espaços, aspas simples).
 - ✅ **MEL-04 / MEL-05** feitos em 12/11/2026 (Node 22, `npm ci`, `USER node`, `HEALTHCHECK` em `/healthz`, node-cron 4). Texto original:
 - **MEL-04 Dockerfile:** `npm ci --omit=dev`, `USER node`, `HEALTHCHECK`, `NODE_ENV=production`; atualizar a imagem de `node:20` (fim de suporte em abr/2026) para `node:22`/`node:24` LTS e o `node-cron` para 4.x (fecha BUG-14).
