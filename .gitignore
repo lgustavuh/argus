@@ -1,0 +1,2 @@
+# Configuracao local do Claude Code (permissoes da maquina; pode conter comandos com credenciais)
+.claude/settings.local.json
