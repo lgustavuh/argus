@@ -64,7 +64,14 @@ async function findByNumero(numeroProcesso) {
     return rows[0] || null;
 }
 
-function montarFiltro({ responsavelId, tribunal, semResponsavel, situacao, busca, arquivados, etiqueta }) {
+// Processo do TJMG sem sistema de tramitacao conhecido: o botao "Abrir no PJe/eproc" nao sabe para
+// onde levar (mesma regra de linkBuilder.normalizarSistema). Constante interna, sem dado do usuario.
+const SEM_SISTEMA_TJMG = `p.tribunal = 'tjmg'
+    AND COALESCE(p.sistema_informado, '') NOT IN ('pje', 'eproc')
+    AND lower(COALESCE(p.sistema, '')) NOT LIKE '%pje%'
+    AND lower(COALESCE(p.sistema, '')) NOT LIKE '%eproc%'`;
+
+function montarFiltro({ responsavelId, tribunal, semResponsavel, semSistema, situacao, busca, arquivados, etiqueta }) {
     const conditions = [arquivados ? 'p.ativo = FALSE' : 'p.ativo = TRUE'];
     const params = [];
     if (responsavelId) {
@@ -76,6 +83,7 @@ function montarFiltro({ responsavelId, tribunal, semResponsavel, situacao, busca
         conditions.push(`p.tribunal = $${params.length}`);
     }
     if (semResponsavel) conditions.push('p.procurador_responsavel_id IS NULL');
+    if (semSistema) conditions.push(`(${SEM_SISTEMA_TJMG})`);
     if (etiqueta) {
         params.push(etiqueta);
         conditions.push(etiquetas.condicao('processo', 'p', `$${params.length}`));
@@ -149,6 +157,7 @@ async function contarResumo({ diasSemMovimentacao = 60 } = {}) {
             COUNT(*) FILTER (WHERE procurador_responsavel_id IS NULL)::int AS sem_responsavel,
             COUNT(*) FILTER (WHERE situacao_fonte = 'nao_localizado')::int AS nao_localizados,
             COUNT(*) FILTER (WHERE situacao_fonte = 'aguardando')::int AS aguardando,
+            COUNT(*) FILTER (WHERE situacao_fonte = 'localizado' AND ${SEM_SISTEMA_TJMG})::int AS sem_sistema,
             COUNT(*) FILTER (WHERE situacao_fonte = 'localizado' AND COALESCE(
                 (SELECT MAX(m.data_hora) FROM movimentos m WHERE m.processo_id = p.id),
                 p.data_ajuizamento) < NOW() - ($1 || ' days')::interval)::int AS sem_movimentacao
@@ -159,6 +168,7 @@ async function contarResumo({ diasSemMovimentacao = 60 } = {}) {
     return {
         total: r.total,
         semResponsavel: r.sem_responsavel,
+        semSistema: r.sem_sistema,
         naoLocalizados: r.nao_localizados,
         aguardando: r.aguardando,
         semMovimentacao: r.sem_movimentacao,

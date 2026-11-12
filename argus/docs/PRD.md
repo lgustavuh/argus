@@ -188,7 +188,7 @@ isso a Fase 1 vem antes do MNI.
 | Fase | Conteúdo | Critério de saída |
 |---|---|---|
 | **0 — Higiene** ✅ | BUG-01, BUG-14, MEL-04, MEL-05 | Repositório sem dados/segredos; `npm audit` sem alta |
-| **1 — Alertas confiáveis e úteis** | MEL-16, MEL-17, BUG-03/MEL-11, MEL-10, MEL-09; base completa (mutirão de cadastro) | Cada alerta leva ao sistema certo; uma intimação = um alerta; e-mail não entregue é reenviado |
+| **1 — Alertas confiáveis e úteis** ✅ código (12/11/2026) | MEL-16, MEL-17, BUG-03/MEL-11, MEL-10, MEL-09; base completa (mutirão de cadastro — painel mostra "sem responsável" e "sem sistema identificado", com filtro na lista) | Cada alerta leva ao sistema certo; uma intimação = um alerta; e-mail não entregue é reenviado |
 | **2 — MNI (somente leitura)** | MEL-07, MEL-18, MEL-19 | Avisos do TJMG viram alertas com data da ciência tácita; processos novos cadastrados sozinhos |
 | **3 — Prazos** | MEL-08, MEL-13, MEL-14 | Sugestão de data fatal (editável) em uso pela equipe |
 | **Contínuo** | MEL-01, MEL-02, MEL-03, BUG-05 a BUG-13, MEL-12 | Testes e CI cobrindo sync, alertas e permissões |

@@ -32,6 +32,7 @@ router.get('/', a(async (req, res) => {
         tribunal: req.query.tribunal || undefined,
         responsavelId: req.query.responsavelId || undefined,
         semResponsavel: req.query.semResponsavel === 'true',
+        semSistema: req.query.semSistema === 'true',
         situacao: SITUACOES.includes(req.query.situacao) ? req.query.situacao : undefined,
         busca: req.query.busca?.trim() || undefined,
         etiqueta: req.query.etiqueta?.trim() || undefined,

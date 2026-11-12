@@ -140,6 +140,24 @@ describe('telas: botão "Abrir no PJe/eproc" (MEL-16, integração)', { skip: ba
         assert.equal((await pedir(`/configuracoes/email/reenviar/${e.id}`, 'procurador', { method: 'POST' })).status, 403, 'procurador não acessa configurações');
     });
 
+    test('painel conta processos do TJMG sem sistema e a lista filtra por eles', async () => {
+        const semSistema = await novoAlerta('Inválido');
+        const comSistema = await novoAlerta('PJe');
+        await pool.query(`UPDATE processos SET situacao_fonte = 'localizado' WHERE id = ANY($1)`, [[semSistema.processoId, comSistema.processoId]]);
+        const { rows: [esperado] } = await pool.query(
+            `SELECT COUNT(*)::int AS n FROM processos WHERE ativo AND situacao_fonte = 'localizado' AND tribunal = 'tjmg'
+               AND sistema_informado IS NULL AND sistema = 'Inválido'`);
+
+        const painel = await (await pedir('/painel', 'procurador')).text();
+        assert.match(painel, new RegExp(`>${esperado.n}</span>\\s*<span class="desc">Sem sistema identificado`));
+
+        const lista = await (await pedir('/processos?semSistema=true', 'procurador')).text();
+        const { rows } = await pool.query('SELECT numero_processo FROM processos WHERE id = ANY($1) ORDER BY id', [[semSistema.processoId, comSistema.processoId]]);
+        const fmt = (n) => `${n.slice(0, 7)}-${n.slice(7, 9)}.${n.slice(9, 13)}.${n.slice(13, 14)}.${n.slice(14, 16)}.${n.slice(16)}`;
+        assert.ok(lista.includes(fmt(rows[0].numero_processo)), 'processo sem sistema aparece');
+        assert.ok(!lista.includes(fmt(rows[1].numero_processo)), 'processo no PJe não aparece');
+    });
+
     test('lista de alertas e detalhe do processo também mostram o botão', async () => {
         const { processoId } = await novoAlerta('eproc');
         assert.match(await (await pedir('/alertas?status=abertos', 'procurador')).text(), /Abrir no eproc/);
