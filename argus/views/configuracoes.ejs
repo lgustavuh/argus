@@ -306,9 +306,10 @@
         <h2>Fonte de dados e atualização automática</h2>
         <form method="post" action="/configuracoes/integracao" class="form-vertical">
             <label for="fonte">Fonte de dados dos processos</label>
+            <p class="meta">Uma fonte que atende só alguns tribunais (o MNI atende só o TJMG) vale para eles; os demais continuam no DataJud. Na troca, movimentos já gravados são reconhecidos e não geram alerta de novo.</p>
             <select id="fonte" name="fonte">
                 <% fontes.forEach(function(f) { %>
-                <option value="<%= f.nome %>" <%= cfg['sync.fonte'] === f.nome ? 'selected' : '' %> <%= f.implementado ? '' : 'disabled' %>><%= f.rotulo %></option>
+                <option value="<%= f.nome %>" <%= cfg['sync.fonte'] === f.nome ? 'selected' : '' %> <%= f.implementado ? '' : 'disabled' %>><%= f.rotulo %><%= f.tribunais ? ' — só ' + f.tribunais.map(function(t) { return t.toUpperCase(); }).join(', ') : '' %></option>
                 <% }) %>
             </select>
             <label class="checkbox"><input type="checkbox" name="syncAtivo" value="true" <%= cfg['sync.ativo'] === 'true' ? 'checked' : '' %>> Atualização automática ativada</label>
@@ -332,7 +333,7 @@
             <dt>Localizados / não localizados</dt><dd><%= sync.ultimoResumo.localizados %> / <%= sync.ultimoResumo.naoLocalizados %></dd>
             <dt>Movimentos novos</dt><dd><%= sync.ultimoResumo.movimentosNovos %></dd>
             <dt>Alertas criados</dt><dd><%= sync.ultimoResumo.alertasCriados %></dd>
-            <dt>Erros</dt><dd><%= sync.ultimoResumo.erros.length ? sync.ultimoResumo.erros.map(function(e) { return (e.tribunal || e.processo || e.etapa) + ': ' + e.erro; }).join(' | ') : 'nenhum' %></dd>
+            <dt>Erros</dt><dd><%= sync.ultimoResumo.erros.length ? sync.ultimoResumo.erros.map(function(e) { return (e.tribunal || e.processo || e.etapa || e.fonte) + ': ' + e.erro; }).join(' | ') : 'nenhum' %></dd>
         </dl>
         <% } else { %>
         <p class="meta">Nenhuma atualização completa executada ainda.</p>

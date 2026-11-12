@@ -7,6 +7,25 @@ async function listHashesExistentes(processoId) {
     return new Set(rows.map((r) => r.hash_dedup));
 }
 
+/**
+ * Movimentos ja gravados de um processo com a chave "semantica" codigo|minuto (UTC). Usado so na
+ * troca de fonte (PRD MEL-19): o mesmo movimento vindo da outra fonte tem outro hash, mas o mesmo
+ * codigo TPU e o mesmo instante.
+ */
+async function listChavesSemanticas(processoId) {
+    const { rows } = await pool.query(
+        `SELECT id, codigo_tpu, to_char(data_hora, 'YYYY-MM-DD"T"HH24:MI') AS minuto
+         FROM movimentos WHERE processo_id = $1 ORDER BY id`,
+        [processoId]
+    );
+    return rows;
+}
+
+/** Re-chaveia um movimento ja gravado com o hash da nova fonte (a formula do hash nao muda). */
+async function trocarHash(id, hashDedup) {
+    await pool.query('UPDATE movimentos SET hash_dedup = $1 WHERE id = $2', [hashDedup, id]);
+}
+
 async function insertMany(movimentos) {
     if (!movimentos.length) return [];
     const inseridos = [];
@@ -44,4 +63,4 @@ async function listAlertaPendente({ processoId = null } = {}) {
     return rows;
 }
 
-module.exports = { listHashesExistentes, insertMany, listByProcesso, listAlertaPendente };
+module.exports = { listHashesExistentes, listChavesSemanticas, trocarHash, insertMany, listByProcesso, listAlertaPendente };

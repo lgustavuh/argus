@@ -38,6 +38,8 @@ function naoImplementado() {
 module.exports = {
     nome: 'mni',
     rotulo: 'MNI — TJMG (aguardando credenciamento)',
+    // So o TJMG: os demais tribunais continuam no DataJud (PRD MEL-19).
+    tribunais: ['tjmg'],
     implementado: false,
     async disponivel() {
         const cred = await carregarCredenciais();

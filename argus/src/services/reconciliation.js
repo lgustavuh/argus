@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 
-const { fonteAtiva } = require('../fontes');
+const { fonteAtiva, roteadorDeFontes } = require('../fontes');
 const configuracoes = require('./configuracoes');
 const codigosTpuModel = require('../models/codigosTpu');
 const processosModel = require('../models/processos');
@@ -29,8 +29,13 @@ function hashDedup(processoId, codigoTpu, dataHora, ocorrencia = 1) {
  * historico inteiro entra como linha do tempo, mas so geram alerta os movimentos relevantes dos
  * ultimos N dias (Configuracoes > Integracao). Sem isso, cadastrar 300 processos geraria milhares de
  * alertas de intimacoes antigas ja tratadas.
+ *
+ * Troca de fonte (PRD MEL-19, ex.: DataJud -> MNI): o mesmo movimento chega com outro formato de
+ * data e, portanto, outro hash. Na primeira consulta pela nova fonte, o movimento que ja existe com
+ * o mesmo codigo e o mesmo minuto e reconhecido e so ganha o hash da nova fonte (nao duplica a
+ * linha do tempo nem o alerta); o resto segue a regra da carga inicial.
  */
-async function aplicarDadosDaFonte(processo, dados, { mapaCodigosRelevantes, janelaCargaInicialDias }) {
+async function aplicarDadosDaFonte(processo, dados, { mapaCodigosRelevantes, janelaCargaInicialDias, fonteNome = 'datajud' }) {
     const atualizado = await processosModel.atualizarDadosFonte(processo.id, {
         grau: dados.grau,
         graus: dados.graus,
@@ -49,7 +54,18 @@ async function aplicarDadosDaFonte(processo, dados, { mapaCodigosRelevantes, jan
     });
 
     const hashesExistentes = await movimentosModel.listHashesExistentes(processo.id);
-    const primeiraCarga = hashesExistentes.size === 0;
+    const trocaDeFonte = hashesExistentes.size > 0 && Boolean(processo.fonte_movimentos) && processo.fonte_movimentos !== fonteNome;
+    const primeiraCarga = hashesExistentes.size === 0 || trocaDeFonte;
+
+    // codigo|minuto -> ids dos movimentos ja gravados (so na troca de fonte).
+    const jaGravados = new Map();
+    if (trocaDeFonte) {
+        for (const r of await movimentosModel.listChavesSemanticas(processo.id)) {
+            const k = `${r.codigo_tpu ?? ''}|${r.minuto}`;
+            if (!jaGravados.has(k)) jaGravados.set(k, []);
+            jaGravados.get(k).push(r.id);
+        }
+    }
     const limiteCargaInicial = Date.now() - janelaCargaInicialDias * 24 * 60 * 60 * 1000;
 
     const foraDaCargaInicial = (dataHora) => {
@@ -66,6 +82,13 @@ async function aplicarDadosDaFonte(processo, dados, { mapaCodigosRelevantes, jan
         const hash = hashDedup(processo.id, m.codigo, chave, m.ocorrencia);
         if (hashesExistentes.has(hash) || vistos.has(hash)) continue;
         vistos.add(hash);
+        if (trocaDeFonte) {
+            const ids = jaGravados.get(`${m.codigo ?? ''}|${minutoUtc(m.dataHora)}`);
+            if (ids?.length) {
+                await movimentosModel.trocarHash(ids.shift(), hash);
+                continue;
+            }
+        }
         // Repeticoes que antes eram descartadas pela deduplicacao antiga: entram na linha do tempo, mas
         // nao geram alerta, porque a 1a ocorrencia (mesmo codigo e horario) ja foi gravada e alertada.
         const repeticaoJaAlertada = m.ocorrencia > 1 && hashesExistentes.has(hashDedup(processo.id, m.codigo, chave));
@@ -84,11 +107,17 @@ async function aplicarDadosDaFonte(processo, dados, { mapaCodigosRelevantes, jan
     }
 
     const inseridos = await movimentosModel.insertMany(novos);
+    if (processo.fonte_movimentos !== fonteNome) await processosModel.setFonteMovimentos(processo.id, fonteNome);
 
     // Inclui pendentes de rodadas anteriores deste processo que tenham falhado.
     const { criados: alertasCriados } = await gerarAlertasPendentes({ processoId: processo.id, processo: atualizado });
 
     return { movimentosNovos: inseridos.length, alertasCriados };
+}
+
+function minutoUtc(dataHora) {
+    const t = dataHora ? new Date(dataHora) : null;
+    return t && !Number.isNaN(t.getTime()) ? t.toISOString().slice(0, 16) : null;
 }
 
 let emAndamento = null;
@@ -108,9 +137,10 @@ async function sincronizar({ processoIds = null, origem = 'agendado' } = {}) {
 
 async function executar({ processoIds, origem }) {
     const inicio = new Date();
-    const fonte = await fonteAtiva();
+    const escolhida = await fonteAtiva();
+    const fontePara = await roteadorDeFontes();
     const resumo = {
-        fonte: fonte.nome,
+        fonte: escolhida.nome,
         origem,
         processosConsultados: 0,
         localizados: 0,
@@ -121,13 +151,11 @@ async function executar({ processoIds, origem }) {
         erros: []
     };
 
-    if (!(await fonte.disponivel())) {
-        throw new Error(`Fonte de dados "${fonte.rotulo}" indisponível — verifique Configurações > Integração.`);
-    }
+    const escolhidaDisponivel = await escolhida.disponivel();
 
-    if (!processoIds && typeof fonte.descobrirProcessos === 'function') {
+    if (!processoIds && escolhidaDisponivel && typeof escolhida.descobrirProcessos === 'function') {
         try {
-            const numeros = await fonte.descobrirProcessos();
+            const numeros = await escolhida.descobrirProcessos();
             for (const numero of numeros || []) {
                 const criado = await processosModel.inserirManual({
                     numeroProcesso: numero,
@@ -146,34 +174,60 @@ async function executar({ processoIds, origem }) {
         : await processosModel.listAtivosParaSync();
     resumo.processosConsultados = processos.length;
 
+    // Cada tribunal na sua fonte (PRD MEL-19): MNI no TJMG e DataJud no resto, por exemplo.
+    const grupos = new Map();
+    for (const processo of processos) {
+        const fonte = fontePara(processo.tribunal);
+        if (!grupos.has(fonte)) grupos.set(fonte, []);
+        grupos.get(fonte).push(processo);
+    }
+    resumo.fonte = [...new Set([escolhida, ...grupos.keys()].map((f) => f.nome))].join(', ');
+
+    const disponiveis = new Map();
+    for (const fonte of grupos.keys()) {
+        disponiveis.set(fonte, fonte === escolhida ? escolhidaDisponivel : await fonte.disponivel());
+    }
+    // Nenhuma fonte utilizavel: erro visivel na tela, como antes.
+    if (processos.length ? ![...disponiveis.values()].some(Boolean) : !escolhidaDisponivel) {
+        const f = processos.length ? [...grupos.keys()][0] : escolhida;
+        throw new Error(`Fonte de dados "${f.rotulo}" indisponível — verifique Configurações > Integração.`);
+    }
+
     if (processos.length) {
         const [mapaCodigosRelevantes, janelaCargaInicialDias] = await Promise.all([
             codigosTpuModel.getMapaRelevancia(),
             configuracoes.lerNumero('sync.janela_carga_inicial_dias')
         ]);
 
-        const { encontrados, erros } = await fonte.consultarProcessos(processos.map((p) => p.numero_processo));
-        resumo.erros.push(...erros);
-        const tribunaisComErro = new Set(erros.map((e) => e.tribunal));
-
-        for (const processo of processos) {
-            // Se a consulta do tribunal falhou, nao da para afirmar que o processo "nao foi localizado".
-            if (tribunaisComErro.has(processo.tribunal)) continue;
-            const dados = encontrados.get(processo.numero_processo);
-            if (!dados) {
-                await processosModel.marcarConsulta(processo.id, 'nao_localizado');
-                resumo.naoLocalizados += 1;
+        for (const [fonte, lista] of grupos) {
+            if (!disponiveis.get(fonte)) {
+                // Fonte fora do ar nao e "nao localizado": os processos ficam como estavam.
+                resumo.erros.push({ fonte: fonte.nome, erro: `Fonte "${fonte.rotulo}" indisponível; ${lista.length} processo(s) não consultado(s).` });
                 continue;
             }
-            try {
-                const r = await aplicarDadosDaFonte(processo, dados, { mapaCodigosRelevantes, janelaCargaInicialDias });
-                await processosModel.marcarConsulta(processo.id, 'localizado');
-                resumo.localizados += 1;
-                resumo.movimentosNovos += r.movimentosNovos;
-                resumo.alertasCriados += r.alertasCriados;
-            } catch (err) {
-                console.error(`[sync] Falha ao reconciliar ${processo.numero_processo}:`, err.message);
-                resumo.erros.push({ processo: processo.numero_processo, erro: err.message });
+            const { encontrados, erros } = await fonte.consultarProcessos(lista.map((p) => p.numero_processo));
+            resumo.erros.push(...erros);
+            const tribunaisComErro = new Set(erros.map((e) => e.tribunal));
+
+            for (const processo of lista) {
+                // Se a consulta do tribunal falhou, nao da para afirmar que o processo "nao foi localizado".
+                if (tribunaisComErro.has(processo.tribunal)) continue;
+                const dados = encontrados.get(processo.numero_processo);
+                if (!dados) {
+                    await processosModel.marcarConsulta(processo.id, 'nao_localizado');
+                    resumo.naoLocalizados += 1;
+                    continue;
+                }
+                try {
+                    const r = await aplicarDadosDaFonte(processo, dados, { mapaCodigosRelevantes, janelaCargaInicialDias, fonteNome: fonte.nome });
+                    await processosModel.marcarConsulta(processo.id, 'localizado');
+                    resumo.localizados += 1;
+                    resumo.movimentosNovos += r.movimentosNovos;
+                    resumo.alertasCriados += r.alertasCriados;
+                } catch (err) {
+                    console.error(`[sync] Falha ao reconciliar ${processo.numero_processo}:`, err.message);
+                    resumo.erros.push({ processo: processo.numero_processo, erro: err.message });
+                }
             }
         }
     }

@@ -103,6 +103,7 @@ async function consultarProcessos(numeros) {
 module.exports = {
     nome: 'datajud',
     rotulo: 'DataJud — API pública do CNJ',
+    tribunais: null, // todos
     async disponivel() {
         return Boolean(process.env.DATAJUD_API_KEY);
     },

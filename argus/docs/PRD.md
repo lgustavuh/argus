@@ -177,7 +177,7 @@ Encontrados na revisão de 11/11/2026. Severidade: 🔴 alta · 🟠 média · �
   único alerta (em 12/11, uma única publicação gerou 3 alertas: disponibilização no DJe, expedição e publicação).
 - **MEL-18 Avisos pendentes do MNI** como alertas com a **data da ciência tácita** (10 dias corridos da
   disponibilização — Lei 11.419/2006, art. 5º, §3º) em destaque; sem abrir o teor.
-- **MEL-19 Fonte por tribunal:** MNI para o TJMG, DataJud para TRF6/TRT3. A primeira consulta de cada
+- ✅ **MEL-19 Fonte por tribunal** (12/11/2026, pronto para o MNI: cada fonte declara `tribunais`; `processos.fonte_movimentos` — migration 013; na troca, movimento com mesmo código e minuto é re-chaveado em vez de duplicado; fonte fora do ar não marca "não localizado"): MNI para o TJMG, DataJud para TRF6/TRT3. A primeira consulta de cada
   processo pela nova fonte é tratada como carga inicial (o `hash_dedup` usa o `dataHora` bruto da fonte
   e mudaria de formato — sem isso, todo movimento antigo viraria alerta repetido).
 

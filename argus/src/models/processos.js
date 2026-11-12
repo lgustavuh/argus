@@ -32,6 +32,10 @@ async function atualizarDadosFonte(id, { grau, graus, classeNome, orgaoJulgador,
     return rows[0];
 }
 
+async function setFonteMovimentos(id, fonte) {
+    await pool.query('UPDATE processos SET fonte_movimentos = $1 WHERE id = $2', [fonte, id]);
+}
+
 async function marcarConsulta(id, situacao) {
     await pool.query('UPDATE processos SET situacao_fonte = $1, ultima_consulta_em = NOW() WHERE id = $2', [situacao, id]);
 }
@@ -182,6 +186,7 @@ module.exports = {
     atualizarDadosFonte,
     marcarConsulta,
     listAtivosParaSync,
+    setFonteMovimentos,
     listPorIds,
     findById,
     findByNumero,
