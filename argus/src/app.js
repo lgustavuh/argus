@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 
 const bootstrap = require('./db/bootstrap');
+const pool = require('./db/pool');
 const { iniciarScheduler } = require('./jobs/syncScheduler');
 const { verificarConfiguracaoSeguranca } = require('./config/seguranca');
 const { verificarOrigem } = require('./middleware/origem');
@@ -72,6 +73,16 @@ app.locals.diaDaSemana = diaDaSemana;
 // Para trechos montados como HTML na view (<%- ... %>): escapa texto vindo do banco.
 app.locals.escapar = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 app.locals.fmtDataHora = (d) => (d ? new Date(d).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—');
+
+// Healthcheck (Docker/monitoramento): sem autenticacao e sem expor nada alem de ok/erro.
+app.get('/healthz', async (req, res) => {
+    try {
+        await pool.query('SELECT 1');
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(503).json({ ok: false });
+    }
+});
 
 app.use('/api', apiRoutes);
 app.use('/', webRoutes);
