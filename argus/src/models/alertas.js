@@ -25,6 +25,40 @@ async function create({ processoId, movimentoId, tipo = 'movimento_relevante', p
     return rows[0];
 }
 
+/**
+ * Cria o alerta de um movimento pendente e remove a marca `alerta_pendente` na MESMA transacao.
+ * O UPDATE trava a linha do movimento: duas execucoes simultaneas nao criam alerta duplicado — a
+ * segunda encontra a marca ja removida e devolve null.
+ */
+async function criarParaMovimentoPendente({ movimentoId, prazoDiasAlerta, tipo = 'movimento_relevante' }) {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const { rows: reivindicado } = await client.query(
+            `UPDATE movimentos SET alerta_pendente = FALSE
+             WHERE id = $1 AND alerta_pendente
+             RETURNING processo_id`,
+            [movimentoId]
+        );
+        if (!reivindicado.length) {
+            await client.query('ROLLBACK');
+            return null;
+        }
+        const { rows } = await client.query(
+            `INSERT INTO alertas (processo_id, movimento_id, tipo, prazo_dias_alerta)
+             VALUES ($1,$2,$3,$4) RETURNING *`,
+            [reivindicado[0].processo_id, movimentoId, tipo, prazoDiasAlerta]
+        );
+        await client.query('COMMIT');
+        return rows[0];
+    } catch (err) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 async function findById(id) {
     const { rows } = await pool.query(`${SELECT_DETALHADO} WHERE a.id = $1`, [id]);
     return rows[0] || null;
@@ -131,6 +165,7 @@ async function listRecentes({ limit = 6 } = {}) {
 
 module.exports = {
     create,
+    criarParaMovimentoPendente,
     findById,
     list,
     marcarVisualizado,

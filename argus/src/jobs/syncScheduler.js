@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const { sincronizar, syncEmAndamento } = require('../services/reconciliation');
-const { escalarAlertasVencidos } = require('../services/alertEngine');
+const { escalarAlertasVencidos, gerarAlertasPendentes } = require('../services/alertEngine');
 const { enviarResumosDiarios } = require('../services/agenda');
 const configuracoes = require('../services/configuracoes');
 
@@ -31,6 +31,15 @@ async function talvezSincronizar() {
 
 function iniciarScheduler() {
     cron.schedule('0 0 * * * *', async () => {
+        try {
+            // Alertas que falharam em um sync anterior nao esperam o proximo sync (PRD BUG-02).
+            if (!syncEmAndamento()) {
+                const { criados } = await gerarAlertasPendentes();
+                if (criados > 0) console.log(`[scheduler] ${criados} alerta(s) pendente(s) gerado(s).`);
+            }
+        } catch (err) {
+            console.error('[scheduler] Falha ao gerar alertas pendentes:', err.message);
+        }
         try {
             const total = await escalarAlertasVencidos();
             if (total > 0) console.log(`[scheduler] ${total} alerta(s) escalado(s).`);

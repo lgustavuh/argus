@@ -6,7 +6,7 @@ const codigosTpuModel = require('../models/codigosTpu');
 const processosModel = require('../models/processos');
 const movimentosModel = require('../models/movimentos');
 const { buildLinkConsultaPublica } = require('./linkBuilder');
-const { criarAlertaParaMovimento } = require('./alertEngine');
+const { gerarAlertasPendentes } = require('./alertEngine');
 const { tribunalDoNumero } = require('../util/cnj');
 
 /**
@@ -52,40 +52,41 @@ async function aplicarDadosDaFonte(processo, dados, { mapaCodigosRelevantes, jan
     const primeiraCarga = hashesExistentes.size === 0;
     const limiteCargaInicial = Date.now() - janelaCargaInicialDias * 24 * 60 * 60 * 1000;
 
+    const foraDaCargaInicial = (dataHora) => {
+        if (!primeiraCarga) return false;
+        const quando = dataHora ? new Date(dataHora).getTime() : 0;
+        return quando < limiteCargaInicial;
+    };
+
     const vistos = new Set();
     const novos = [];
-    // Repeticoes que antes eram descartadas pela deduplicacao antiga: entram na linha do tempo, mas
-    // nao geram alerta, porque a 1a ocorrencia (mesmo codigo e horario) ja foi gravada e alertada.
-    const semAlerta = new Set();
     for (const m of dados.movimentos) {
         // `chave` = valor bruto da fonte; mantem os hashes ja gravados validos mesmo com a correcao de fuso.
         const chave = m.chave ?? m.dataHora;
         const hash = hashDedup(processo.id, m.codigo, chave, m.ocorrencia);
         if (hashesExistentes.has(hash) || vistos.has(hash)) continue;
         vistos.add(hash);
-        if (m.ocorrencia > 1 && hashesExistentes.has(hashDedup(processo.id, m.codigo, chave))) semAlerta.add(hash);
+        // Repeticoes que antes eram descartadas pela deduplicacao antiga: entram na linha do tempo, mas
+        // nao geram alerta, porque a 1a ocorrencia (mesmo codigo e horario) ja foi gravada e alertada.
+        const repeticaoJaAlertada = m.ocorrencia > 1 && hashesExistentes.has(hashDedup(processo.id, m.codigo, chave));
+        const relevanteParaPrazo = mapaCodigosRelevantes.has(m.codigo);
         novos.push({
             processoId: processo.id,
             codigoTpu: m.codigo,
             nome: m.nome,
             dataHora: m.dataHora,
-            relevanteParaPrazo: mapaCodigosRelevantes.has(m.codigo),
-            hashDedup: hash
+            relevanteParaPrazo,
+            hashDedup: hash,
+            // Decidido ANTES de gravar: o movimento entra marcado e a marca so sai junto com a
+            // criacao do alerta (mesma transacao). Assim uma falha nunca deixa movimento sem alerta.
+            alertaPendente: relevanteParaPrazo && !repeticaoJaAlertada && !foraDaCargaInicial(m.dataHora)
         });
     }
 
     const inseridos = await movimentosModel.insertMany(novos);
 
-    let alertasCriados = 0;
-    for (const movimento of inseridos) {
-        if (!movimento.relevante_para_prazo || semAlerta.has(movimento.hash_dedup)) continue;
-        if (primeiraCarga) {
-            const quando = movimento.data_hora ? new Date(movimento.data_hora).getTime() : 0;
-            if (quando < limiteCargaInicial) continue;
-        }
-        await criarAlertaParaMovimento({ processo: atualizado, movimento });
-        alertasCriados += 1;
-    }
+    // Inclui pendentes de rodadas anteriores deste processo que tenham falhado.
+    const { criados: alertasCriados } = await gerarAlertasPendentes({ processoId: processo.id, processo: atualizado });
 
     return { movimentosNovos: inseridos.length, alertasCriados };
 }
@@ -175,6 +176,14 @@ async function executar({ processoIds, origem }) {
                 resumo.erros.push({ processo: processo.numero_processo, erro: err.message });
             }
         }
+    }
+
+    // Rede de seguranca: alertas que ficaram pendentes em qualquer processo (falha em rodada anterior).
+    try {
+        const { criados } = await gerarAlertasPendentes();
+        resumo.alertasCriados += criados;
+    } catch (err) {
+        resumo.erros.push({ etapa: 'alertas_pendentes', erro: err.message });
     }
 
     if (!processoIds) {
