@@ -1,4 +1,17 @@
 node_modules
-.env
 *.log
+
+# Segredos: so o .env.example vai para o git
+.env
+.env.*
+!.env.example
+
+# Dados reais (processos, usuarios, anexos) — nunca versionar
+/backups
 /documentos
+/imagens
+*.dump
+*.sql.gz
+
+# Arquivos temporarios do Office
+~$*
