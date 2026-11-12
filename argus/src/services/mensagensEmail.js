@@ -157,6 +157,26 @@ async function resumoAgenda(d, ap) {
     });
 }
 
+/**
+ * Aviso semanal de processos parados (PRD MEL-13).
+ * @param {object} d { nome, dias, processos: [{ numero_processo, classe_nome, ultima_movimentacao }] }
+ */
+async function processosParados(d, ap) {
+    ap = ap || (await aparencia());
+    return montarEmail({
+        tipo: 'agenda',
+        aparencia: ap,
+        assunto: `${d.processos.length} processo(s) sem movimentação há mais de ${d.dias} dias`,
+        titulo: `Bom dia, ${d.nome.split(' ')[0]}: ${d.processos.length} processo(s) parado(s)`,
+        texto: `Estes processos sob sua responsabilidade não têm movimentação há mais de ${d.dias} dias. Vale conferir no sistema do tribunal se há algo pendente (impulso oficial, diligência, cumprimento).`,
+        infos: d.processos.map((p) => [
+            formatar(p.numero_processo),
+            `${p.classe_nome || 'Classe não informada'} · última movimentação: ${p.ultima_movimentacao ? fmtDataHora(p.ultima_movimentacao).slice(0, 10) : 'nenhuma registrada'}`
+        ]),
+        botao: { texto: 'Ver processos parados', url: `${baseUrl()}/processos?parados=true` }
+    });
+}
+
 // Dados ficticios para a previa na tela de configuracoes.
 const EXEMPLO = {
     alertaId: 0,
@@ -178,4 +198,4 @@ async function previa(tipo, ap) {
     return novoAlerta(EXEMPLO, ap);
 }
 
-module.exports = { aparencia, novoAlerta, alertaEscalado, teste, previa, compromissoAtribuido, resumoAgenda };
+module.exports = { aparencia, novoAlerta, alertaEscalado, teste, previa, compromissoAtribuido, resumoAgenda, processosParados };

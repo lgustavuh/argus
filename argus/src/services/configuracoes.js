@@ -9,6 +9,8 @@ const { cifrar, decifrar } = require('../util/cripto');
 const PADROES = {
     'geral.dias_escalonamento': '3',
     'geral.dias_sem_movimentacao': '60',
+    'geral.aviso_parados_ativo': 'true',
+    'geral.ultimo_aviso_parados_dia': '',
 
     'agenda.lembrete_ativo': 'true',
     'agenda.dias_antecedencia': '3',

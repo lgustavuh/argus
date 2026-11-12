@@ -168,7 +168,7 @@ Encontrados na revisão de 11/11/2026. Severidade: 🔴 alta · 🟠 média · �
 - ✅ **MEL-10 Escalonamento para o responsável do processo primeiro** (12/11/2026: e-mail para o responsável + procurador(es), não para a equipe toda; destino registrado = responsável se for procurador), depois para o procurador (hoje vai para o primeiro procurador por ordem alfabética).
 - ✅ **MEL-11 Outbox de e-mail com reenvio** (12/11/2026: até 6 tentativas com espera de 5 min a 6 h; "falhou" aparece em Configurações › E-mail e no status do sistema, com reenvio; descarta se o envio estiver desativado; enviados apagados após 90 dias) e tela de "e-mails não entregues" (resolve BUG-03 e dá visibilidade).
 - **MEL-12 Limite de login persistente** (tabela) para sobreviver a reinício do container.
-- **MEL-13 Alerta de "processo parado"** (sem movimentação há N dias) como notificação, não só no painel.
+- ✅ **MEL-13 Alerta de "processo parado"** (12/11/2026: filtro `/processos?parados=true` a partir do painel; aviso semanal por e-mail na segunda às 7h, por responsável, liga/desliga em Configurações › Geral) (sem movimentação há N dias) como notificação, não só no painel.
 - **MEL-14 Exportação** (CSV/PDF) de processos, alertas e agenda para relatórios à chefia.
 - **MEL-15 Retenção/LGPD:** política de expurgo de auditoria e documentos de processos arquivados.
 - ✅ **MEL-16 Botão "Abrir no PJe/eproc"** (12/11/2026: alerta, lista, processo e e-mail; "Copiar número"; sistema informado direto no alerta; "Estou ciente (só no Argus)") em cada alerta e processo, levando ao sistema certo; quando o

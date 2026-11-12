@@ -25,6 +25,8 @@
             <p class="meta">Sábados, domingos e feriados não contam. Passado esse prazo sem ciência no Argus, o alerta vira "escalado" e o responsável pelo processo e o(s) procurador(es) recebem novo e-mail.</p>
             <label for="diasSemMovimentacao">Dias para considerar um processo "parado"</label>
             <input type="number" id="diasSemMovimentacao" name="diasSemMovimentacao" min="7" max="3650" value="<%= cfg['geral.dias_sem_movimentacao'] %>" required>
+            <label class="checkbox"><input type="checkbox" name="avisoParadosAtivo" value="true" <%= cfg['geral.aviso_parados_ativo'] === 'true' ? 'checked' : '' %>> Aviso semanal de processos parados por e-mail</label>
+            <p class="meta">Toda segunda-feira, a partir das 7h, cada responsável recebe os seus processos parados; os sem responsável vão para o(s) procurador(es).</p>
             <h3>Agenda</h3>
             <label class="checkbox"><input type="checkbox" name="lembreteAtivo" value="true" <%= cfg['agenda.lembrete_ativo'] === 'true' ? 'checked' : '' %>> Enviar resumo diário da agenda por e-mail</label>
             <p class="meta">Todo dia útil, a partir das 7h, cada responsável recebe os compromissos vencidos e os dos próximos dias. Quem não tem nada no período não recebe e-mail.</p>

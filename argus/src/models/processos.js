@@ -75,7 +75,13 @@ const SEM_SISTEMA_TJMG = `p.tribunal = 'tjmg'
     AND lower(COALESCE(p.sistema, '')) NOT LIKE '%pje%'
     AND lower(COALESCE(p.sistema, '')) NOT LIKE '%eproc%'`;
 
-function montarFiltro({ responsavelId, tribunal, semResponsavel, semSistema, situacao, busca, arquivados, etiqueta }) {
+// Localizado e sem movimentacao ha mais de $N dias (contando do ajuizamento, se nao ha movimento).
+// $N e sempre parametro; o texto e constante interna.
+const PARADO = (param) => `p.situacao_fonte = 'localizado' AND COALESCE(
+    (SELECT MAX(m.data_hora) FROM movimentos m WHERE m.processo_id = p.id),
+    p.data_ajuizamento) < NOW() - (${param} || ' days')::interval`;
+
+function montarFiltro({ responsavelId, tribunal, semResponsavel, semSistema, paradosHaDias, situacao, busca, arquivados, etiqueta }) {
     const conditions = [arquivados ? 'p.ativo = FALSE' : 'p.ativo = TRUE'];
     const params = [];
     if (responsavelId) {
@@ -88,6 +94,10 @@ function montarFiltro({ responsavelId, tribunal, semResponsavel, semSistema, sit
     }
     if (semResponsavel) conditions.push('p.procurador_responsavel_id IS NULL');
     if (semSistema) conditions.push(`(${SEM_SISTEMA_TJMG})`);
+    if (paradosHaDias) {
+        params.push(String(paradosHaDias));
+        conditions.push(`(${PARADO(`$${params.length}`)})`);
+    }
     if (etiqueta) {
         params.push(etiqueta);
         conditions.push(etiquetas.condicao('processo', 'p', `$${params.length}`));
@@ -154,6 +164,19 @@ async function setAtivo(id, ativo) {
     return rows[0] || null;
 }
 
+/** Processos ativos parados (PRD MEL-13), com responsavel e data da ultima movimentacao. */
+async function listParados(diasSemMovimentacao) {
+    const { rows } = await pool.query(
+        `SELECT p.id, p.numero_processo, p.tribunal, p.classe_nome, p.procurador_responsavel_id,
+                (SELECT MAX(m.data_hora) FROM movimentos m WHERE m.processo_id = p.id) AS ultima_movimentacao
+         FROM processos p
+         WHERE p.ativo = TRUE AND ${PARADO('$1')}
+         ORDER BY ultima_movimentacao NULLS FIRST, p.id`,
+        [String(diasSemMovimentacao)]
+    );
+    return rows;
+}
+
 async function contarResumo({ diasSemMovimentacao = 60 } = {}) {
     const { rows } = await pool.query(
         `SELECT
@@ -162,9 +185,7 @@ async function contarResumo({ diasSemMovimentacao = 60 } = {}) {
             COUNT(*) FILTER (WHERE situacao_fonte = 'nao_localizado')::int AS nao_localizados,
             COUNT(*) FILTER (WHERE situacao_fonte = 'aguardando')::int AS aguardando,
             COUNT(*) FILTER (WHERE situacao_fonte = 'localizado' AND ${SEM_SISTEMA_TJMG})::int AS sem_sistema,
-            COUNT(*) FILTER (WHERE situacao_fonte = 'localizado' AND COALESCE(
-                (SELECT MAX(m.data_hora) FROM movimentos m WHERE m.processo_id = p.id),
-                p.data_ajuizamento) < NOW() - ($1 || ' days')::interval)::int AS sem_movimentacao
+            COUNT(*) FILTER (WHERE ${PARADO('$1')})::int AS sem_movimentacao
          FROM processos p WHERE p.ativo = TRUE`,
         [diasSemMovimentacao]
     );
@@ -196,5 +217,6 @@ module.exports = {
     setObservacao,
     setSistemaInformado,
     setAtivo,
-    contarResumo
+    contarResumo,
+    listParados
 };

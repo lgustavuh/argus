@@ -158,6 +158,14 @@ describe('telas: botão "Abrir no PJe/eproc" (MEL-16, integração)', { skip: ba
         assert.ok(!lista.includes(fmt(rows[1].numero_processo)), 'processo no PJe não aparece');
     });
 
+    test('MEL-13: filtro de processos parados abre a partir do painel', async () => {
+        const painel = await (await pedir('/painel', 'procurador')).text();
+        assert.match(painel, /href="\/processos\?parados=true"/);
+        const resp = await pedir('/processos?parados=true', 'procurador');
+        assert.equal(resp.status, 200);
+        assert.match(await resp.text(), /sem movimentação há mais de 60 dias/);
+    });
+
     test('lista de alertas e detalhe do processo também mostram o botão', async () => {
         const { processoId } = await novoAlerta('eproc');
         assert.match(await (await pedir('/alertas?status=abertos', 'procurador')).text(), /Abrir no eproc/);

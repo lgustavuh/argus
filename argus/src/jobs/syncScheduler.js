@@ -4,6 +4,7 @@ const { escalarAlertasVencidos, gerarAlertasPendentes } = require('../services/a
 const { enviarResumosDiarios } = require('../services/agenda');
 const configuracoes = require('../services/configuracoes');
 const outbox = require('../services/outbox');
+const { enviarAvisoSemanal } = require('../services/processosParados');
 
 /**
  * Um unico relogio, de hora em hora:
@@ -61,6 +62,12 @@ function iniciarScheduler() {
             if (enviados > 0) console.log(`[scheduler] Resumo da agenda enviado a ${enviados} pessoa(s).`);
         } catch (err) {
             console.error('[scheduler] Falha ao enviar o resumo da agenda:', err.message);
+        }
+        try {
+            const avisados = await enviarAvisoSemanal();
+            if (avisados > 0) console.log(`[scheduler] Aviso de processos parados para ${avisados} pessoa(s).`);
+        } catch (err) {
+            console.error('[scheduler] Falha no aviso de processos parados:', err.message);
         }
         try {
             await talvezSincronizar();

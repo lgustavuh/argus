@@ -89,6 +89,7 @@ router.post('/geral', a(async (req, res) => {
     await salvarEAuditar(req, {
         'geral.dias_escalonamento': inteiroEntre(req.body.diasEscalonamento, 1, 60, 3),
         'geral.dias_sem_movimentacao': inteiroEntre(req.body.diasSemMovimentacao, 7, 3650, 60),
+        'geral.aviso_parados_ativo': req.body.avisoParadosAtivo === 'true' ? 'true' : 'false',
         'agenda.lembrete_ativo': req.body.lembreteAtivo === 'true' ? 'true' : 'false',
         'agenda.dias_antecedencia': inteiroEntre(req.body.diasAntecedencia, 0, 30, 3)
     });

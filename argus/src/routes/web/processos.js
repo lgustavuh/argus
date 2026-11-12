@@ -11,6 +11,7 @@ const documentosModel = require('../../models/documentos');
 const { hojeSP } = require('../../util/datas');
 const usuariosModel = require('../../models/usuarios');
 const auditoria = require('../../services/auditoria');
+const configuracoes = require('../../services/configuracoes');
 const { cadastrar, MAX_POR_IMPORTACAO } = require('../../services/cadastroProcessos');
 const { fonteAtiva } = require('../../fontes');
 const { buildLinkConsultaPublica, SISTEMAS_CONHECIDOS } = require('../../services/linkBuilder');
@@ -33,6 +34,7 @@ router.get('/', a(async (req, res) => {
         responsavelId: req.query.responsavelId || undefined,
         semResponsavel: req.query.semResponsavel === 'true',
         semSistema: req.query.semSistema === 'true',
+        paradosHaDias: req.query.parados === 'true' ? await configuracoes.lerNumero('geral.dias_sem_movimentacao') : undefined,
         situacao: SITUACOES.includes(req.query.situacao) ? req.query.situacao : undefined,
         busca: req.query.busca?.trim() || undefined,
         etiqueta: req.query.etiqueta?.trim() || undefined,

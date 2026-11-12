@@ -50,6 +50,7 @@
         <% } %>
     </form>
     <% if (filtro.semResponsavel) { %><p class="meta">Mostrando apenas processos sem responsável. <a href="/processos">Limpar</a></p><% } %>
+    <% if (filtro.paradosHaDias) { %><p class="meta">Mostrando apenas processos sem movimentação há mais de <%= filtro.paradosHaDias %> dias. <a href="/processos">Limpar</a></p><% } %>
     <% if (filtro.semSistema) { %><p class="meta">Mostrando apenas processos do TJMG sem sistema identificado (PJe ou eproc). Abra cada um e informe o sistema para o botão "Abrir no tribunal" levar direto ao lugar certo. <a href="/processos">Limpar</a></p><% } %>
     <div class="tabela-rolavel">
     <table>
