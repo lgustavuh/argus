@@ -3,7 +3,7 @@
 **Sistema de acompanhamento processual e alertas de prazo**
 Procuradoria-Geral do Município de Itaú de Minas/MG — CNPJ 23.767.031/0001-78
 Responsável técnico: Setor de Tecnologia da Informação (STI) da Prefeitura Municipal
-Versão do documento: 1.1 — outubro/2026
+Versão do documento: 1.2 — novembro/2026 (escopo: sem abertura de teor nem ciência no Tribunal)
 
 > Documento destinado a acompanhar o pedido de credenciamento no Modelo Nacional de
 > Interoperabilidade (MNI) do Tribunal de Justiça de Minas Gerais e a responder dúvidas técnicas
@@ -36,8 +36,8 @@ processo andou").
 **Não faz:**
 - **Nenhum peticionamento, protocolo, manifestação ou ato processual.** O Argus não escreve nada no
   sistema do Tribunal.
-- Não abre teor de comunicação processual de forma automática (ver §8.3 — cuidado com a ciência
-  ficta/tácita).
+- **Não abre teor de comunicação processual nem registra ciência**, em nenhuma hipótese (ver §8.3).
+  A ciência e as providências são praticadas pelos procuradores diretamente no PJe ou no eproc.
 - Não calcula a data fatal do prazo com valor jurídico; sinaliza que há movimentação que pode abrir
   prazo, e a contagem continua sob responsabilidade do procurador/advogado.
 - Não é acessível ao público nem a terceiros.
@@ -188,7 +188,7 @@ concedido, na versão do MNI que o Tribunal disponibilizar (o PJe aceita as vers
 |---|---|
 | `consultarProcesso` (com movimentos e cabeçalho) | Atualizar dados e movimentações dos processos cadastrados, com informação mais atual que a do DataJud. |
 | `consultarAvisosPendentes` | Listar citações e intimações pendentes dirigidas ao Município e **cadastrar automaticamente processos novos**. |
-| `consultarTeorComunicacao` | Somente por ação explícita de procurador/advogado (ver §8.3). |
+| `consultarTeorComunicacao` | **Não utilizada** (ver §8.3). |
 
 Nenhuma operação de envio (`entregarManifestacaoProcessual`) será utilizada.
 
@@ -198,9 +198,11 @@ registrado para ele, informação que a API pública do DataJud muitas vezes nã
 
 ### 8.3 Cuidado com a ciência das comunicações
 A consulta ao teor de uma comunicação pode ser registrada pelo Tribunal como ciência da intimação,
-iniciando a contagem do prazo. Por isso o Argus **não abre o teor de comunicações automaticamente**:
-ele apenas lista os avisos pendentes e alerta a equipe; a abertura do teor, quando houver, será um
-ato deliberado de procurador ou advogado, identificado na trilha de auditoria.
+iniciando a contagem do prazo. Por isso o Argus **nunca abre o teor de comunicações e não registra
+ciência no Tribunal**: ele apenas lista os avisos pendentes, informa a data em que ocorrerá a ciência
+tácita e alerta a equipe, com um atalho para o processo no PJe ou no eproc. A ciência e as demais
+providências são praticadas pelo procurador no sistema do Tribunal. A "ciência" registrada dentro do
+Argus é apenas interna (confirma que a equipe viu o alerta) e não tem efeito processual.
 
 ### 8.4 Dados necessários do Tribunal
 - Endereços (WSDL) do serviço MNI para cada sistema e grau — PJe 1º e 2º graus e eproc 1º e 2º

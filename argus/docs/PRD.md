@@ -41,7 +41,10 @@ na rede interna da Prefeitura.
 
 ## 4. Princípios de produto
 
-1. **Somente leitura nos tribunais** — o Argus monitora; nunca peticiona nem assina.
+1. **Somente leitura nos tribunais** — o Argus **só mostra alertas e andamentos** e leva o procurador ao
+   PJe ou ao eproc. Nunca peticiona, nunca assina, **nunca abre o teor de intimações e nunca registra
+   ciência no tribunal** (abrir o teor pelo MNI pode contar como ciência). A "ciência" dentro do Argus é
+   interna: confirma que a equipe viu o alerta, sem efeito processual. (Decisão da Procuradoria, 12/11/2026.)
 2. **Rastreabilidade acima de conveniência** — ciência é um clique explícito, registrado; anotações não são apagáveis.
 3. **Urgência primeiro** — o que precisa de atenção salta; o que foi tratado recua (ver `PRODUCT.md`).
 4. **Nenhum alerta pode se perder** — falha de e-mail, de rede ou de tribunal nunca pode apagar silenciosamente um alerta.
@@ -99,6 +102,8 @@ na rede interna da Prefeitura.
 ## 6. Fora de escopo
 
 - Peticionamento, protocolo ou assinatura digital em tribunal.
+- Abertura do teor de comunicações (`consultarTeorComunicacao`) e qualquer registro de ciência no tribunal.
+  Ações no tribunal pelo próprio Argus podem ser reavaliadas no futuro, por decisão expressa da Procuradoria.
 - Cálculo jurídico da data fatal com certeza (dias úteis, feriados forenses, suspensões) — o prazo é lançado por pessoa.
 - Multi-município / multi-tenant.
 - Descoberta automática de processos pela API pública do DataJud (ela não expõe partes — Portaria CNJ 160/2020).
@@ -158,18 +163,34 @@ Encontrados na revisão de 11/11/2026. Severidade: 🔴 alta · 🟠 média · �
 - **MEL-13 Alerta de "processo parado"** (sem movimentação há N dias) como notificação, não só no painel.
 - **MEL-14 Exportação** (CSV/PDF) de processos, alertas e agenda para relatórios à chefia.
 - **MEL-15 Retenção/LGPD:** política de expurgo de auditoria e documentos de processos arquivados.
+- **MEL-16 Botão "Abrir no PJe/eproc"** em cada alerta e processo, levando ao sistema certo; quando o
+  sistema é desconhecido, pedir que seja informado (uma vez por processo) em vez de mostrar dois links.
+- **MEL-17 Uma intimação, um alerta:** movimentos relevantes do mesmo processo em janela curta formam um
+  único alerta (em 12/11, uma única publicação gerou 3 alertas: disponibilização no DJe, expedição e publicação).
+- **MEL-18 Avisos pendentes do MNI** como alertas com a **data da ciência tácita** (10 dias corridos da
+  disponibilização — Lei 11.419/2006, art. 5º, §3º) em destaque; sem abrir o teor.
+- **MEL-19 Fonte por tribunal:** MNI para o TJMG, DataJud para TRF6/TRT3. A primeira consulta de cada
+  processo pela nova fonte é tratada como carga inicial (o `hash_dedup` usa o `dataHora` bruto da fonte
+  e mudaria de formato — sem isso, todo movimento antigo viraria alerta repetido).
+
+### 8.3 Diagnóstico de uso (produção, 12/11/2026)
+3 processos cadastrados; 3 alertas, todos escalados e sem ciência, vindos da mesma publicação; nenhum
+prazo lançado na agenda. A base ainda não está completa e o ruído de alertas desestimula o uso — por
+isso a Fase 1 vem antes do MNI.
 
 ---
 
 ## 9. Roadmap proposto
 
+**Revisado em 12/11/2026.** Fase 1 aprovada, nesta ordem: MEL-16 → MEL-17 → MEL-11/BUG-03 → MEL-10/MEL-09.
+
 | Fase | Conteúdo | Critério de saída |
 |---|---|---|
-| **0 — Higiene (imediato)** | BUG-01, BUG-14 | Repositório sem dados/segredos; `npm audit` sem alta |
-| **1 — Confiabilidade** | MEL-01, MEL-02, BUG-02, BUG-03/MEL-11, BUG-04 | Testes cobrindo sync e alertas; nenhum caminho que perca alerta |
-| **2 — Endurecimento** | BUG-05 a BUG-13, MEL-04, MEL-05, MEL-12 | API e auth sem as falhas listadas |
-| **3 — MNI** | MEL-07 | Processos novos cadastrados por aviso do TJMG |
-| **4 — Prazos** | MEL-08, MEL-09, MEL-10, MEL-13, MEL-14 | Sugestão de data fatal em uso pela equipe |
+| **0 — Higiene** ✅ | BUG-01, BUG-14, MEL-04, MEL-05 | Repositório sem dados/segredos; `npm audit` sem alta |
+| **1 — Alertas confiáveis e úteis** | MEL-16, MEL-17, BUG-03/MEL-11, MEL-10, MEL-09; base completa (mutirão de cadastro) | Cada alerta leva ao sistema certo; uma intimação = um alerta; e-mail não entregue é reenviado |
+| **2 — MNI (somente leitura)** | MEL-07, MEL-18, MEL-19 | Avisos do TJMG viram alertas com data da ciência tácita; processos novos cadastrados sozinhos |
+| **3 — Prazos** | MEL-08, MEL-13, MEL-14 | Sugestão de data fatal (editável) em uso pela equipe |
+| **Contínuo** | MEL-01, MEL-02, MEL-03, BUG-05 a BUG-13, MEL-12 | Testes e CI cobrindo sync, alertas e permissões |
 
 ## 10. Riscos
 

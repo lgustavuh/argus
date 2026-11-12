@@ -21,8 +21,9 @@ const configuracoes = require('../services/configuracoes');
  * 2. descobrirProcessos() -> operacao `consultarAvisosPendentes`: lista as citacoes/intimacoes
  *    pendentes dirigidas ao Municipio. E isso que permite descobrir processos NOVOS sem cadastro
  *    manual: devolver os numeros CNJ e o sync os cadastra automaticamente (origem 'mni_aviso').
- *    Atencao: abrir o teor de um aviso (`consultarTeorComunicacao`) pode CONTAR COMO CIENCIA da
- *    intimacao no tribunal — so faca isso por acao explicita de procurador/advogado.
+ *    PROIBIDO chamar `consultarTeorComunicacao`: abrir o teor pode CONTAR COMO CIENCIA da intimacao
+ *    no tribunal. O Argus so lista avisos e leva o procurador ao PJe/eproc (PRD §4, decisao de
+ *    12/11/2026). Do aviso basta a data de disponibilizacao, para mostrar quando ocorre a ciencia tacita.
  */
 
 async function carregarCredenciais() {

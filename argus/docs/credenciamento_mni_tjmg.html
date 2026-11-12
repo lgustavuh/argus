@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Credenciamento MNI — TJMG</title>
+<style>
+  /* Layout: coluna única de leitura; passos numerados (é uma sequência real), minutas em papel timbrado. */
+  :root {
+    --ink: #14213D;
+    --ink-soft: #43506B;
+    --ink-faint: #6E7891;
+    --paper: #F6F6F3;
+    --paper-raised: #FFFFFF;
+    --border: #DEDCD3;
+    --border-strong: #C7C4B7;
+    --accent: #0B6E52;
+    --accent-ink: #08503C;
+    --accent-soft: #E4F0EA;
+    --status-pattern: #8A6D1A;
+    --status-pattern-soft: #F3ECD6;
+    --status-verify: #9C4B2E;
+    --status-verify-soft: #F3E2D9;
+    --status-argus: #2F4F86;
+    --status-argus-soft: #E3E9F4;
+    --shadow-float: 0 10px 30px rgba(20, 33, 61, 0.14);
+
+    --font-display: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --font-body: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #ECEBE6; --ink-soft: #B8B6AC; --ink-faint: #85897F;
+      --paper: #14181C; --paper-raised: #1B2025;
+      --border: #2B3238; --border-strong: #3A424A;
+      --accent: #37C79B; --accent-ink: #8FEBCB; --accent-soft: rgba(55, 199, 155, 0.14);
+      --status-pattern: #E0B84C; --status-pattern-soft: rgba(224, 184, 76, 0.14);
+      --status-verify: #E08F6C; --status-verify-soft: rgba(224, 143, 108, 0.14);
+      --status-argus: #8FB2EE; --status-argus-soft: rgba(143, 178, 238, 0.14);
+      --shadow-float: 0 10px 30px rgba(0, 0, 0, 0.45);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #ECEBE6; --ink-soft: #B8B6AC; --ink-faint: #85897F;
+    --paper: #14181C; --paper-raised: #1B2025;
+    --border: #2B3238; --border-strong: #3A424A;
+    --accent: #37C79B; --accent-ink: #8FEBCB; --accent-soft: rgba(55, 199, 155, 0.14);
+    --status-pattern: #E0B84C; --status-pattern-soft: rgba(224, 184, 76, 0.14);
+    --status-verify: #E08F6C; --status-verify-soft: rgba(224, 143, 108, 0.14);
+    --status-argus: #8FB2EE; --status-argus-soft: rgba(143, 178, 238, 0.14);
+    --shadow-float: 0 10px 30px rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { max-width: 760px; margin: 0 auto; padding: 64px 24px 96px; }
+
+  .kicker {
+    font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--accent-ink); display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
+  }
+  .kicker::before { content: ""; width: 22px; height: 1px; background: var(--accent); }
+
+  h1 {
+    font-family: var(--font-display); font-weight: 700; font-size: clamp(1.9rem, 4vw, 2.6rem);
+    line-height: 1.15; letter-spacing: -0.01em; margin: 0 0 14px; text-wrap: balance; color: var(--ink);
+  }
+
+  .lede { font-size: 1.0625rem; color: var(--ink-soft); max-width: 62ch; margin: 0 0 32px; }
+
+  /* Situação atual */
+  .situacao {
+    background: var(--paper-raised); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px 22px; margin-bottom: 24px;
+  }
+  .situacao h2 {
+    margin: 0 0 12px; font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-faint); font-weight: 600;
+  }
+  .situacao dl { margin: 0; display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr); gap: 8px 18px; font-size: 0.92rem; }
+  .situacao dt { color: var(--ink); font-weight: 600; }
+  .situacao dd { margin: 0; color: var(--ink-soft); min-width: 0; }
+  @media (max-width: 560px) {
+    .situacao dl { grid-template-columns: minmax(0, 1fr); gap: 2px 0; }
+    .situacao dd { margin-bottom: 10px; }
+  }
+
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 10px 18px; padding: 14px 20px; background: var(--paper-raised);
+    border: 1px solid var(--border); border-radius: 10px; margin-bottom: 48px; font-size: 0.83rem; color: var(--ink-soft);
+  }
+  .legend .item { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot.confirmado { background: var(--accent); }
+  .dot.padrao { background: var(--status-pattern); }
+  .dot.verificar { background: var(--status-verify); }
+  .dot.argus { background: var(--status-argus); }
+
+  h2.section-title {
+    font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; margin: 64px 0 24px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border-strong); text-wrap: balance;
+  }
+
+  .steps { display: flex; flex-direction: column; }
+  .step {
+    display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 20px; padding: 26px 0;
+    border-top: 1px solid var(--border);
+  }
+  .step:first-child { border-top: none; padding-top: 4px; }
+  .step-num { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: var(--accent-ink); line-height: 1.4; }
+  .step-body h3 { margin: 0 0 8px; font-size: 1.06rem; font-weight: 700; color: var(--ink); text-wrap: balance; }
+  .step-body p { margin: 0 0 10px; color: var(--ink-soft); font-size: 0.96rem; max-width: 64ch; }
+  .step-body p:last-child { margin-bottom: 0; }
+  .step-body ul { margin: 0 0 10px; padding-left: 20px; color: var(--ink-soft); font-size: 0.94rem; max-width: 62ch; }
+  .step-body li { margin-bottom: 4px; }
+  .step-body code, .situacao code, .checklist code { font-family: var(--font-mono); font-size: 0.86em; background: var(--paper); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; overflow-wrap: anywhere; }
+
+  .status-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 0.7rem;
+    letter-spacing: 0.03em; padding: 4px 10px; border-radius: 999px;
+  }
+  .pill.confirmado { background: var(--accent-soft); color: var(--accent-ink); }
+  .pill.padrao { background: var(--status-pattern-soft); color: var(--status-pattern); }
+  .pill.verificar { background: var(--status-verify-soft); color: var(--status-verify); }
+  .pill.argus { background: var(--status-argus-soft); color: var(--status-argus); }
+
+  a { color: var(--accent-ink); text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: currentColor; }
+  a:focus-visible, .copy-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .contact-box {
+    margin-top: 14px; padding: 14px 16px; background: var(--paper); border: 1px dashed var(--border-strong);
+    border-radius: 8px; font-size: 0.88rem; color: var(--ink-soft);
+  }
+  .contact-box strong { color: var(--ink); }
+
+  /* Exigências do TJMG */
+  .exigencias {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px;
+    margin: 14px 0 4px; padding: 0; list-style: none;
+  }
+  .exigencias li {
+    padding: 10px 12px; background: var(--paper-raised); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    border-radius: 6px; font-size: 0.88rem; color: var(--ink-soft); min-width: 0;
+  }
+  .exigencias strong { color: var(--ink); display: block; font-size: 0.9rem; }
+
+  /* Ofício e e-mail */
+  .letterhead {
+    background: var(--paper-raised); border: 1px solid var(--border); border-radius: 4px; box-shadow: var(--shadow-float);
+    padding: 48px 44px; font-family: var(--font-display); color: var(--ink); position: relative; margin-top: 8px;
+  }
+  .letterhead::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--accent); }
+  .letterhead .ref {
+    font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-faint); margin-bottom: 28px;
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px;
+  }
+  .letterhead .destinatario, .letterhead .assunto { margin-bottom: 24px; font-size: 0.98rem; }
+  .letterhead .assunto { font-weight: 700; }
+  .letterhead p { margin: 0 0 16px; font-size: 0.98rem; line-height: 1.75; text-align: justify; }
+  .letterhead ol { margin: 0 0 16px; padding-left: 24px; font-size: 0.98rem; line-height: 1.7; }
+  .letterhead .dados { margin: 0 0 20px; display: grid; grid-template-columns: minmax(0, 13rem) minmax(0, 1fr); gap: 6px 16px; font-size: 0.95rem; line-height: 1.55; }
+  .letterhead .dados dt { font-weight: 700; }
+  .letterhead .dados dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+  .letterhead .fecho { margin-top: 40px; }
+  .letterhead .assinatura {
+    margin-top: 56px; padding-top: 10px; border-top: 1px solid var(--border-strong); width: 60%;
+    font-family: var(--font-body); font-size: 0.85rem; color: var(--ink-soft);
+  }
+  .letterhead.email { font-family: var(--font-body); padding: 32px 36px; }
+  .letterhead.email p { text-align: left; font-size: 0.95rem; line-height: 1.65; }
+  .email-head { font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .email-head div { margin-bottom: 4px; overflow-wrap: anywhere; }
+  .email-head b { color: var(--ink); font-weight: 600; }
+  .placeholder { color: var(--accent-ink); background: var(--accent-soft); padding: 0 4px; border-radius: 3px; font-family: var(--font-body); font-weight: 600; font-size: 0.92em; }
+
+  .copy-row { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+  .copy-msg { font-size: 0.82rem; color: var(--ink-faint); }
+  .copy-btn {
+    font-family: var(--font-mono); font-size: 0.76rem; letter-spacing: 0.03em; background: var(--paper-raised); color: var(--ink);
+    border: 1px solid var(--border-strong); border-radius: 6px; padding: 8px 14px; cursor: pointer;
+    transition: border-color 0.15s ease-out, color 0.15s ease-out;
+  }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent-ink); }
+  .copy-btn.copied { color: var(--accent-ink); border-color: var(--accent); }
+
+  .checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .checklist li {
+    display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--paper-raised);
+    border: 1px solid var(--border); border-radius: 8px; font-size: 0.92rem; color: var(--ink-soft);
+  }
+  .checklist li::before {
+    content: ""; width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--border-strong);
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .checklist li.feito::before { background: var(--accent); border-color: var(--accent); }
+  .checklist strong { color: var(--ink); }
+
+  .alt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; margin-top: 48px; }
+  .alt-box { padding: 22px 24px; background: var(--accent-soft); border-radius: 10px; min-width: 0; }
+  .alt-box h3 { margin: 0 0 8px; font-family: var(--font-display); font-size: 1.12rem; color: var(--accent-ink); text-wrap: balance; }
+  .alt-box p { margin: 0 0 10px; color: var(--ink); font-size: 0.92rem; }
+  .alt-box p:last-of-type { margin-bottom: 0; }
+  .alt-box a { color: var(--accent-ink); font-weight: 600; }
+
+  .sources ol { padding-left: 20px; margin: 0; color: var(--ink-soft); font-size: 0.88rem; }
+  .sources li { margin-bottom: 8px; overflow-wrap: anywhere; }
+
+  .closing-note {
+    margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--border-strong);
+    font-size: 0.88rem; color: var(--ink-faint); max-width: 62ch;
+  }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 16px 72px; }
+    .letterhead { padding: 30px 20px; }
+    .letterhead.email { padding: 24px 18px; }
+    .letterhead .assinatura { width: 100%; }
+    .letterhead .dados { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .letterhead .dados dd { margin-bottom: 10px; }
+    .step { grid-template-columns: 28px minmax(0, 1fr); gap: 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .copy-btn { transition: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="kicker">Argus · Procuradoria Municipal de Itaú de Minas</p>
+  <h1>Como pedir credenciamento MNI ao TJMG</h1>
+  <p class="lede">
+    Hoje o Argus acompanha os processos cujos números a Procuradoria cadastra, consultando a API
+    pública do DataJud. Essa fonte tem atraso, não informa as partes, muitas vezes não informa em
+    que sistema o processo tramita e não avisa quando chega processo novo. O MNI resolve isso:
+    traz os dados direto do tribunal e as citações e intimações dirigidas ao Município, o que
+    permite cadastrar processos novos automaticamente.
+  </p>
+
+  <section class="situacao" aria-labelledby="sit-titulo">
+    <h2 id="sit-titulo">Situação em 12/11/2026</h2>
+    <dl>
+      <dt>Canal no TJMG</dt>
+      <dd>Confirmado em contato com o TJMG: o pedido é um <strong>ofício ao Presidente do
+        Tribunal</strong>, enviado por e-mail para <code>gapre@tjmg.jus.br</code>, requerendo a
+        formalização de um <strong>termo de cooperação técnica</strong> entre o TJMG e a Prefeitura
+        para interoperabilidade entre sistemas.</dd>
+      <dt>Ofício ao TJMG</dt>
+      <dd>Ainda não enviado. A minuta abaixo já está no novo formato.</dd>
+      <dt>Documento técnico</dt>
+      <dd>Texto atualizado em 12/11 (versão 1.2, em <code>argus/docs/DOCUMENTO_TECNICO.md</code>).
+        <strong>Gere de novo o PDF e o .docx antes de anexar</strong>: os arquivos atuais ainda dizem
+        que o procurador poderia abrir o teor pelo Argus.</dd>
+      <dt>Argus</dt>
+      <dd>A conexão com o MNI está preparada, mas só pode ser concluída com os dados técnicos do
+        tribunal. O uso de certificado digital ainda não foi implementado.</dd>
+      <dt>Escopo (12/11)</dt>
+      <dd>Decisão da Procuradoria: o Argus <strong>só mostra alertas e andamentos</strong>. Não abre o
+        teor de intimações, não registra ciência e não pratica nenhum ato no tribunal. Cada alerta
+        leva o procurador ao PJe ou ao eproc, onde ele toma as providências.</dd>
+    </dl>
+  </section>
+
+  <div class="legend">
+    <span class="item"><span class="dot confirmado"></span>confirmado (fonte oficial ou contato com o TJMG)</span>
+    <span class="item"><span class="dot padrao"></span>padrão visto em outros tribunais</span>
+    <span class="item"><span class="dot verificar"></span>a confirmar direto com o TJMG</span>
+    <span class="item"><span class="dot argus"></span>exigência do Argus</span>
+  </div>
+
+  <h2 class="section-title">O caminho, passo a passo</h2>
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Reunir a base legal do pedido</h3>
+        <p>
+          O TJMG trata da interoperabilidade no <strong>Provimento 355/2018</strong> (Código de
+          Normas da Corregedoria-Geral de Justiça), art. 78, XIII. O processo eletrônico no eproc é
+          regulamentado pela <strong>Portaria Conjunta nº 1.720/PR/2025</strong>, alterada pela
+          nº 1.746/2025. Citar essas normas no ofício mostra que o pedido segue o procedimento que o
+          próprio tribunal reconhece.
+        </p>
+        <div class="status-row"><span class="pill confirmado">confirmado</span></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Pedir um termo de cooperação técnica, por e-mail à Presidência</h3>
+        <p>
+          O TJMG informou o caminho: enviar e-mail para <code>gapre@tjmg.jus.br</code> com um
+          <strong>ofício dirigido ao Presidente do Tribunal</strong>, requerendo a formalização de
+          termo de cooperação técnica entre o TJMG e a Prefeitura para interoperabilidade entre
+          sistemas. O ofício precisa conter:
+        </p>
+        <ul class="exigencias">
+          <li><strong>Nome do sistema</strong>Argus</li>
+          <li><strong>Nome da empresa</strong>quem desenvolve e mantém o sistema</li>
+          <li><strong>Gestor do convênio</strong>nome de quem responde pelo termo na Prefeitura</li>
+          <li><strong>Profissional técnico</strong>nome, e-mail e telefone de quem intermedia as tratativas técnicas</li>
+          <li><strong>CNPJ</strong>do Município</li>
+          <li><strong>Endereço</strong>da Prefeitura</li>
+          <li><strong>Justificativa</strong>por que a integração é necessária</li>
+        </ul>
+        <p>
+          Como o termo é entre o Tribunal e a <strong>Prefeitura</strong>, o ofício deve ser
+          assinado por quem pode firmar convênios em nome do Município, em regra o Prefeito ou
+          autoridade com delegação para isso.
+        </p>
+        <div class="contact-box">
+          <strong>E-mail do pedido:</strong> gapre@tjmg.jus.br &middot;
+          <strong>TI do TJMG:</strong> (31) 3339-7605 &middot;
+          <strong>Telefone institucional:</strong> (31) 3306-3100
+        </div>
+        <div class="status-row">
+          <span class="pill confirmado">canal, destinatário e conteúdo confirmados</span>
+          <span class="pill verificar">quem assina pelo Município: definir internamente</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>Providenciar um certificado digital ICP-Brasil do tipo A1</h3>
+        <p>
+          O TJMG autentica quem usa o MNI pelo CPF ou CNPJ do certificado ICP-Brasil. Órgãos de
+          Advocacia Pública podem usar o certificado institucional (e-CNPJ) ou o pessoal do
+          procurador responsável (e-CPF).
+        </p>
+        <p>
+          Para o Argus, o certificado precisa ser do tipo <strong>A1</strong> (arquivo .pfx), porque o
+          servidor consulta o tribunal sozinho, de hora em hora. O A3 (token ou cartão) exige o
+          dispositivo conectado e alguém digitando o PIN, e não funciona para isso. Anote a data de
+          validade: certificado vencido interrompe as consultas.
+        </p>
+        <div class="status-row">
+          <span class="pill confirmado">ICP-Brasil, institucional ou pessoal</span>
+          <span class="pill argus">tipo A1</span>
+          <span class="pill verificar">qual dos dois o TJMG aceita para webservice</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h3>Pedir acesso ao PJe e ao eproc</h3>
+        <p>
+          O TJMG está levando o eproc às comarcas com competência cível em ciclos, desde setembro de
+          2025, e já integra o Ministério Público e a Defensoria ao eproc pelo MNI. Os processos do
+          Município ficam divididos entre os dois sistemas, e podem mudar de sistema com a
+          migração. Cada sistema tem o seu endereço de MNI.
+        </p>
+        <p>
+          Por isso o ofício pede acesso aos dois, em 1º e 2º graus. Com isso o Argus também passa a
+          saber em que sistema cada processo está, pelo endereço que o encontrar. Hoje o DataJud
+          muitas vezes não informa isso.
+        </p>
+        <div class="status-row">
+          <span class="pill confirmado">expansão do eproc e MNI no eproc</span>
+          <span class="pill verificar">cronograma da comarca a confirmar</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <h3>Assinar o ofício e enviar com o documento técnico</h3>
+        <p>
+          Preencha os campos marcados na minuta, colha a assinatura e envie o PDF do ofício por
+          e-mail para <code>gapre@tjmg.jus.br</code>, usando o modelo de e-mail abaixo. Anexe também
+          o documento técnico do Argus: ele explica arquitetura, segurança, LGPD e o cuidado com a
+          ciência das intimações, e responde de antemão às perguntas da área de TI do tribunal.
+        </p>
+        <div class="status-row"><span class="pill confirmado">envio por e-mail</span></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <h3>Acompanhar a formalização do termo</h3>
+        <p>
+          A Presidência deve encaminhar o pedido à área técnica para análise antes de formalizar o
+          termo de cooperação. No TJMA, que publica o fluxo completo, a Diretoria de TI dá parecer e
+          a Presidência autoriza. O prazo no TJMG não foi informado; o profissional técnico indicado
+          no ofício é quem deve receber o contato da TI do tribunal.
+        </p>
+        <div class="status-row">
+          <span class="pill padrao">padrão observado (TJMA)</span>
+          <span class="pill verificar">prazo a confirmar</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <h3>Receber os dados técnicos do webservice</h3>
+        <p>Com o termo formalizado, confira se recebeu:</p>
+        <ul>
+          <li>endereço (WSDL) de cada sistema e grau, e do ambiente de homologação, se houver;</li>
+          <li>versão do MNI em cada sistema: o PJe já aceita a 2.2.2, a 2.2.3 e a 3.0.0;</li>
+          <li>forma de autenticação: certificado, identificador e senha do consultante, ou ambos;</li>
+          <li>se o Município pode consultar os avisos de citação e intimação pendentes pelo MNI;</li>
+          <li>limites de uso (frequência, horários, consultas simultâneas) e um contato técnico.</li>
+        </ul>
+        <div class="status-row"><span class="pill padrao">PJe: MNI 2.2.2, 2.2.3 e 3.0.0</span></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">8</div>
+      <div class="step-body">
+        <h3>Integrar o Argus e testar em homologação</h3>
+        <p>
+          Com os dados em mãos, o Argus recebe o suporte ao certificado A1 (guardado só no servidor,
+          com aviso antes de vencer) e passa a usar o MNI para consultar processos e avisos. Depois
+          dos testes em homologação, troca-se a fonte em <strong>Configurações › Integração</strong>
+          e liga-se a consulta automática, que hoje está desligada.
+        </p>
+        <p>
+          O Argus nunca abre o teor das intimações. Em vários tribunais, abrir o teor pelo MNI conta
+          como ciência e começa o prazo. O Argus só lista os avisos pendentes, mostra a data em que a
+          ciência tácita vai ocorrer e leva o procurador ao PJe ou ao eproc. A ciência e as demais
+          providências são feitas lá, pelo próprio procurador.
+        </p>
+        <div class="status-row"><span class="pill argus">trabalho no Argus</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alt-grid">
+    <div class="alt-box">
+      <h3>Domicílio Judicial Eletrônico</h3>
+      <p>
+        A Resolução CNJ 455/2022 obriga os municípios a se cadastrarem no Domicílio Judicial
+        Eletrônico, onde os tribunais enviam citações e intimações. O CNJ oferece uma API para
+        órgãos com CNPJ integrarem seus sistemas, e mudou a forma de gerar a credencial dessa API
+        (prazo divulgado: 31/03/2026).
+      </p>
+      <p>
+        Vale confirmar se o Município já está cadastrado e quem recebe as comunicações. A API pode
+        ser um segundo caminho para o Argus receber as intimações, complementar ao MNI.
+      </p>
+    </div>
+    <div class="alt-box">
+      <h3>Enquanto isso: Escritório Digital</h3>
+      <p>
+        O <a href="https://www.escritoriodigital.jus.br" target="_blank" rel="noopener">Escritório Digital</a>
+        do CNJ permite a cada procurador acompanhar, com login próprio, os processos em que atua em
+        qualquer tribunal. Não substitui o Argus, porque é individual e não gera alertas nem
+        escalonamento, mas ajuda enquanto o credenciamento tramita.
+      </p>
+      <p>Não encontrei aviso de desativação. Confirme o funcionamento atual no site.</p>
+    </div>
+  </div>
+
+  <h2 class="section-title">Minuta de ofício</h2>
+  <p class="lede" style="margin-bottom:24px;">
+    Texto-base para papel timbrado da Prefeitura. Troque os campos marcados antes de assinar.
+  </p>
+
+  <div class="letterhead" id="oficio-texto">
+    <div class="ref">
+      <span>Ofício nº <span class="placeholder">[NÚMERO/ANO]</span> — Prefeitura Municipal de Itaú de Minas/MG</span>
+      <span>Itaú de Minas, <span class="placeholder">[DATA]</span></span>
+    </div>
+    <div class="destinatario">
+      A Sua Excelência o Senhor<br>
+      Presidente do Tribunal de Justiça do Estado de Minas Gerais
+    </div>
+    <div class="assunto">
+      Assunto: Requerimento de formalização de Termo de Cooperação Técnica para interoperabilidade
+      entre sistemas (Modelo Nacional de Interoperabilidade — MNI)
+    </div>
+    <p>Senhor Presidente,</p>
+    <p>
+      O Município de Itaú de Minas/MG, por intermédio de sua Procuradoria Municipal, vem
+      respeitosamente requerer a formalização de Termo de Cooperação Técnica entre o Tribunal de
+      Justiça do Estado de Minas Gerais e a Prefeitura Municipal de Itaú de Minas, tendo por objeto
+      a interoperabilidade entre os sistemas processuais deste Tribunal e o sistema de
+      acompanhamento processual do Município, por meio do Modelo Nacional de Interoperabilidade
+      (MNI), nos termos do art. 78, XIII, do Provimento nº 355/2018 da Corregedoria-Geral de Justiça.
+    </p>
+    <p>Para tanto, informamos os dados do requerente e do sistema:</p>
+    <dl class="dados">
+      <dt>Órgão requerente</dt>
+      <dd>Prefeitura Municipal de Itaú de Minas/MG</dd>
+      <dt>CNPJ</dt>
+      <dd>23.767.031/0001-78</dd>
+      <dt>Endereço</dt>
+      <dd><span class="placeholder">[Endereço completo da Prefeitura, com CEP]</span></dd>
+      <dt>Nome do sistema</dt>
+      <dd>Argus — Sistema de Acompanhamento Processual da Procuradoria Municipal</dd>
+      <dt>Empresa responsável pelo sistema</dt>
+      <dd><span class="placeholder">[Desenvolvido e mantido pelo próprio Município, por meio do Setor de Tecnologia da Informação — ou nome e CNPJ da empresa, se houver]</span></dd>
+      <dt>Gestor do convênio</dt>
+      <dd><span class="placeholder">[Nome e cargo]</span></dd>
+      <dt>Profissional para as tratativas técnicas</dt>
+      <dd><span class="placeholder">[Nome]</span> · <span class="placeholder">[e-mail]</span> · <span class="placeholder">[telefone]</span></dd>
+    </dl>
+    <p>
+      <strong>Justificativa.</strong> A Procuradoria Municipal representa o Município em processos
+      que tramitam no PJe e no eproc deste Tribunal e hoje acompanha suas movimentações por consulta
+      manual e por dados públicos agregados, que chegam com atraso e sem informação sobre as partes
+      e o sistema de tramitação. A integração pelo MNI permitirá o controle tempestivo de prazos
+      processuais, reduzindo o risco de perda de prazo e o consequente prejuízo ao erário, e
+      dispensará consultas manuais repetidas aos sistemas do Tribunal.
+    </p>
+    <p>
+      O acesso será operado mediante certificado digital ICP-Brasil
+      <span class="placeholder">[institucional do órgão / pessoal do(a) Procurador(a) responsável]</span>.
+      O sistema limita-se à leitura de dados processuais e da lista de avisos pendentes: não
+      realiza peticionamento nem qualquer manifestação, não abre o teor de comunicações
+      processuais e não registra ciência. A ciência e as demais providências continuam sendo
+      praticadas pelos procuradores diretamente no PJe ou no eproc.
+    </p>
+    <p>Solicita-se, ainda, que sejam informados oportunamente:</p>
+    <ol>
+      <li>os endereços (WSDL) do serviço MNI para o PJe e para o eproc, em 1º e 2º graus, e de eventual ambiente de homologação;</li>
+      <li>a versão do MNI disponível em cada sistema (2.2.2, 2.2.3 ou 3.0.0) e a forma de autenticação exigida;</li>
+      <li>se o Município poderá consultar, pelo MNI, os avisos de citação e intimação pendentes a ele dirigidos;</li>
+      <li>os limites de uso a serem observados (frequência, horários e simultaneidade de consultas).</li>
+    </ol>
+    <p>
+      Segue anexo documento técnico do sistema, com a descrição de sua arquitetura, das medidas de
+      segurança da informação e do tratamento de dados pessoais.
+    </p>
+    <p>
+      Colocamo-nos à disposição para prestar quaisquer esclarecimentos adicionais necessários à
+      análise deste pedido.
+    </p>
+    <p class="fecho">Respeitosamente,</p>
+    <div class="assinatura">
+      <span class="placeholder">[Nome]</span><br>
+      <span class="placeholder">[Prefeito(a) Municipal ou autoridade com competência para firmar o termo]</span><br>
+      Município de Itaú de Minas/MG
+    </div>
+  </div>
+  <div class="copy-row">
+    <span class="copy-msg" aria-live="polite"></span>
+    <button class="copy-btn" type="button" data-alvo="oficio-texto" data-rotulo="Copiar texto do ofício">Copiar texto do ofício</button>
+  </div>
+
+  <h2 class="section-title">Modelo de e-mail</h2>
+  <p class="lede" style="margin-bottom:24px;">
+    Envie de um e-mail institucional da Prefeitura, com o ofício assinado e o documento técnico em anexo.
+  </p>
+
+  <div class="letterhead email" id="email-texto">
+    <div class="email-head">
+      <div><b>Para:</b> gapre@tjmg.jus.br</div>
+      <div><b>Assunto:</b> Ofício nº <span class="placeholder">[NÚMERO/ANO]</span> — Município de Itaú de Minas/MG — Termo de Cooperação Técnica (interoperabilidade MNI)</div>
+      <div><b>Anexos:</b> Ofício assinado (PDF) · Documento técnico do sistema Argus (PDF)</div>
+    </div>
+    <p>Prezados,</p>
+    <p>
+      Encaminhamos, em anexo, o Ofício nº <span class="placeholder">[NÚMERO/ANO]</span>, dirigido ao
+      Excelentíssimo Senhor Presidente do Tribunal de Justiça do Estado de Minas Gerais, por meio do
+      qual o Município de Itaú de Minas/MG requer a formalização de Termo de Cooperação Técnica para
+      interoperabilidade entre sistemas, via Modelo Nacional de Interoperabilidade (MNI).
+    </p>
+    <p>
+      Também segue anexo o documento técnico do sistema Argus. Para as tratativas técnicas, o
+      contato é <span class="placeholder">[nome]</span>, pelo e-mail
+      <span class="placeholder">[e-mail]</span> ou telefone <span class="placeholder">[telefone]</span>.
+    </p>
+    <p>Agradecemos a atenção e permanecemos à disposição.</p>
+    <p>
+      Atenciosamente,<br>
+      <span class="placeholder">[Nome e cargo]</span><br>
+      Prefeitura Municipal de Itaú de Minas/MG
+    </p>
+  </div>
+  <div class="copy-row">
+    <span class="copy-msg" aria-live="polite"></span>
+    <button class="copy-btn" type="button" data-alvo="email-texto" data-rotulo="Copiar texto do e-mail">Copiar texto do e-mail</button>
+  </div>
+
+  <h2 class="section-title">Antes de enviar</h2>
+  <ul class="checklist">
+    <li class="feito"><strong>Documento técnico pronto</strong> em PDF e Word, na pasta <code>argus/docs</code>.</li>
+    <li class="feito"><strong>Canal e destinatário confirmados</strong> com o TJMG: ofício ao Presidente, por e-mail para <code>gapre@tjmg.jus.br</code>.</li>
+    <li><strong>Definir quem assina</strong> pelo Município (Prefeito ou autoridade com delegação para firmar convênios).</li>
+    <li><strong>Definir o gestor do convênio</strong> e o <strong>profissional técnico</strong> (nome, e-mail e telefone).</li>
+    <li><strong>Preencher</strong> o endereço da Prefeitura e a linha "empresa responsável pelo sistema".</li>
+    <li><strong>Decidir</strong> se o certificado será institucional (e-CNPJ) ou do procurador (e-CPF), e providenciar o do <strong>tipo A1</strong>.</li>
+    <li><strong>Verificar</strong> se o Município já está cadastrado no Domicílio Judicial Eletrônico e quem recebe as comunicações.</li>
+    <li><strong>Preencher</strong> o número do ofício conforme a numeração interna.</li>
+    <li><strong>Guardar</strong> o e-mail enviado e a resposta do TJMG para acompanhar o andamento.</li>
+  </ul>
+
+  <section class="sources">
+    <h2 class="section-title">Fontes consultadas</h2>
+    <ol>
+      <li>Contato da Prefeitura com o TJMG em 29/10/2026: canal (e-mail gapre@tjmg.jus.br), destinatário (Presidente do Tribunal), objeto (termo de cooperação técnica) e dados obrigatórios do ofício.</li>
+      <li><a href="https://www.tjmg.jus.br/portal-tjmg/acoes-e-programas/gestao-de-primeira/processo-judicial-eletronico-fluxo-unificado-civel/modelo-nacional-de-interoperabilidade-mni-pje.htm" target="_blank" rel="noopener">Portal TJMG — Modelo Nacional de Interoperabilidade (MNI-PJe)</a>: autenticação por certificado ICP-Brasil e uso de certificado institucional ou pessoal pela Advocacia Pública.</li>
+      <li><a href="https://www.tjmg.jus.br/data/files/DC/83/5F/2D/BB664610DEA66646A04E08A8/Dispositivos%20de%20Processo%20Eletronico%20no%20Novo%20Codigo%20de%20Normas%20da%20CGJ.pdf" target="_blank" rel="noopener">Dispositivos de Processo Eletrônico no Código de Normas da CGJ/TJMG</a>: Provimento 355/2018, art. 78, XIII.</li>
+      <li><a href="https://www8.tjmg.jus.br/institucional/at/pdf/pc17202025.pdf" target="_blank" rel="noopener">Portaria Conjunta nº 1.720/PR/2025 — TJMG</a>: regulamenta o eproc (alterada pela nº 1.746/2025).</li>
+      <li><a href="https://www8.tjmg.jus.br/institucional/at/pdf/pc16812025.pdf" target="_blank" rel="noopener">Portaria Conjunta nº 1.681/2025 — TJMG</a>: ciclos de expansão do eproc nas comarcas com competência cível.</li>
+      <li><a href="https://www.tjmg.jus.br/portal-tjmg/hotsites/relatorio-de-gestao-2026/implantacao-do-eproc.htm" target="_blank" rel="noopener">Relatório de Gestão 2026 — Implantação do eproc (TJMG)</a>: integração do MP e da Defensoria ao eproc pelo MNI.</li>
+      <li>TJMA — fluxo de credenciamento MNI (ofício, parecer da Diretoria de TI, autorização da Presidência), usado como padrão de outro tribunal estadual.</li>
+      <li><a href="https://www.cnj.jus.br/domicilio-judicial-eletronico-prorroga-prazo-para-cadastro-e-integracao/" target="_blank" rel="noopener">CNJ — Domicílio Judicial Eletrônico</a> e <a href="https://portal.trt12.jus.br/noticias/cnj-alerta-para-atualizacao-no-domicilio-judicial-eletronico" target="_blank" rel="noopener">aviso sobre a nova credencial da API</a>: cadastro obrigatório de municípios (Res. CNJ 455/2022) e integração por API.</li>
+      <li><a href="https://www.escritoriodigital.jus.br" target="_blank" rel="noopener">Escritório Digital (CNJ)</a>: acompanhamento processual individual sobre o MNI.</li>
+      <li><a href="https://www.stj.jus.br/sites/portalp/SiteAssets/Paginas/Sob-medida/Tribunais/Documentacao_tecnica.pdf" target="_blank" rel="noopener">Documentação técnica de integração via webservice MNI (STJ)</a>: referência da versão do protocolo (MNI 2.2.2).</li>
+      <li><a href="https://docs.pje.jus.br/servicos-auxiliares/servico-mni-client/" target="_blank" rel="noopener">PJe — Serviço MNI Client</a>: o PJe aceita o MNI 2.2.2, 2.2.3 e 3.0.0. O serviço em si só serve para petições entre serviços do Judiciário e não se aplica ao Argus.</li>
+    </ol>
+  </section>
+
+  <p class="closing-note">
+    Revisado em 12/11/2026: o Argus não abre teor nem registra ciência em nenhuma hipótese
+    (minuta do ofício e passo 8 atualizados). Revisão anterior em 29/10/2026, com as orientações recebidas do TJMG (canal, destinatário, termo de
+    cooperação técnica e dados obrigatórios). Os itens marcados como padrão vêm do procedimento
+    publicado por outro tribunal (TJMA) e da documentação do PJe, e não garantem que o TJMG siga o
+    mesmo rito.
+  </p>
+</div>
+
+<script>
+  (function () {
+    var botoes = document.querySelectorAll('.copy-btn[data-alvo]');
+    Array.prototype.forEach.call(botoes, function (btn) {
+      var box = document.getElementById(btn.getAttribute('data-alvo'));
+      var msg = btn.parentNode.querySelector('.copy-msg');
+      var rotulo = btn.getAttribute('data-rotulo');
+      if (!box) return;
+      function selecionar() {
+        var r = document.createRange();
+        r.selectNodeContents(box);
+        var s = window.getSelection();
+        s.removeAllRanges();
+        s.addRange(r);
+        if (msg) msg.textContent = 'Texto selecionado. Use Ctrl+C para copiar.';
+      }
+      btn.addEventListener('click', function () {
+        var text = box.innerText.replace(/\n{3,}/g, '\n\n');
+        if (!navigator.clipboard) { selecionar(); return; }
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = 'Copiado';
+          btn.classList.add('copied');
+          if (msg) msg.textContent = '';
+          setTimeout(function () {
+            btn.textContent = rotulo;
+            btn.classList.remove('copied');
+          }, 2200);
+        }, selecionar);
+      });
+    });
+  })();
+</script>
+</body>
+</html>
+

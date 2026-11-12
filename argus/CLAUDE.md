@@ -72,7 +72,9 @@ Fluxo central: `syncScheduler` → `reconciliation.sincronizar` → `fonte.consu
 - **Nenhum alerta pode se perder.** Mudanças em sync/alertas precisam preservar: dedup por `hash_dedup`
   (não mude a fórmula — invalidaria os hashes gravados), regra da carga inicial, e "falha do tribunal ≠ não localizado".
 - Ciência é explícita e auditada; anotações são imutáveis; ações relevantes chamam `auditoria.registrar`.
-- O Argus é **somente leitura** nos tribunais.
+- O Argus é **somente leitura** nos tribunais: só mostra alertas/andamentos e leva ao PJe/eproc. **Nunca**
+  chame `consultarTeorComunicacao` nem nada que registre ciência ou ato no tribunal (decisão de 12/11/2026,
+  PRD §4). A "ciência" do Argus é interna.
 
 **Datas e fuso**
 - "Hoje" = `hojeSP()` (America/Sao_Paulo), passado como parâmetro. Não use `CURRENT_DATE` nem `new Date()` para dia de calendário.
